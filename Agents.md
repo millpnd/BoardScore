@@ -275,6 +275,26 @@ For every milestone:
 5. Do not begin the next milestone until the current one is complete.
 
 ---
+Git Guidelines
+
+Each milestone should produce a focused commit.
+
+Examples:
+
+Initialize project
+Create domain models
+Implement TemplateEngine
+Implement ScoreEngine
+Implement WinnerEngine
+Implement UndoEngine
+Implement SessionEngine
+Add Player Setup page
+Add Scoring page
+Implement Session Recovery
+
+Avoid mixing unrelated changes into a single commit.
+
+---
 
 # Definition of Done
 
