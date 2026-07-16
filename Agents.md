@@ -275,7 +275,34 @@ For every milestone:
 5. Do not begin the next milestone until the current one is complete.
 
 ---
-Git Guidelines
+
+# Git Workflow
+
+**Never commit directly to `main`.**
+
+For every milestone:
+
+1. Create a new feature branch from the latest `main`.
+2. Name branches using a descriptive convention such as:
+   * `feature/player-setup`
+   * `feature/template-engine`
+   * `feature/undo-engine`
+   * `fix/score-calculation`
+   * `refactor/session-storage`
+3. Make focused commits related only to the current milestone.
+4. Ensure the project builds successfully and all tests pass before publishing.
+5. Push the feature branch to the remote repository.
+6. **Create a Pull Request targeting `main`.**
+7. Include in the Pull Request:
+   * Summary of changes
+   * Testing performed
+   * Screenshots (if UI changes)
+   * Known limitations (if any)
+8. **Do not merge the Pull Request.** Wait for review and approval.
+
+---
+
+# Commit Guidelines
 
 Each milestone should produce a focused commit.
 
@@ -306,6 +333,7 @@ A task is complete only when:
 * There are no ESLint errors.
 * The implementation follows the architecture.
 * Business logic remains outside the UI.
+* A Pull Request has been created for the completed milestone.
 * The solution is reusable, maintainable, and documented where appropriate.
 
 ---
