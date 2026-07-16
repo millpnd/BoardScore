@@ -7,7 +7,20 @@ import {
   ThemeIcon,
   Title,
 } from '@mantine/core'
+import { Blocks, Dice5, Layers3, Shapes } from 'lucide-react'
 import type { ReactNode } from 'react'
+
+const templateIcons: Readonly<Record<string, ReactNode>> = {
+  blocks: <Blocks aria-hidden size={24} />,
+  cards: <Layers3 aria-hidden size={24} />,
+  dice: <Dice5 aria-hidden size={24} />,
+  shapes: <Shapes aria-hidden size={24} />,
+  'whole-word': <Blocks aria-hidden size={24} />,
+}
+
+export function GameTemplateIcon({ name }: { readonly name: string }) {
+  return templateIcons[name] ?? <Dice5 aria-hidden size={24} />
+}
 
 export interface GameCardProps {
   readonly name: string
@@ -59,6 +72,7 @@ export interface PlayerCardProps {
   readonly leading?: ReactNode
   readonly action?: ReactNode
   readonly highlighted?: boolean
+  readonly details?: ReactNode
 }
 
 export function PlayerCard({
@@ -68,6 +82,7 @@ export function PlayerCard({
   leading,
   action,
   highlighted = false,
+  details,
 }: PlayerCardProps) {
   return (
     <Card className="player-card" data-highlighted={highlighted || undefined}>
@@ -94,6 +109,7 @@ export function PlayerCard({
           {action}
         </Group>
       </Group>
+      {details ? <Stack mt="sm">{details}</Stack> : null}
     </Card>
   )
 }

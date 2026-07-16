@@ -1,1 +1,7 @@
-export { BackButton, Footer, Header, type HeaderProps } from './Navigation'
+export {
+  BackButton,
+  BrandMark,
+  Footer,
+  Header,
+  type HeaderProps,
+} from './Navigation'

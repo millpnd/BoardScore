@@ -224,9 +224,15 @@ describe('SessionEngine player management', () => {
     expectCode('DUPLICATE_PLAYER', () =>
       engine.addPlayer({ id: 'mill', name: 'Duplicate' }),
     )
+    expectCode('DUPLICATE_PLAYER_NAME', () =>
+      engine.addPlayer({ id: 'other', name: ' mill ' }),
+    )
     expectCode('PLAYER_NOT_FOUND', () => engine.removePlayer('missing'))
     expectCode('INVALID_PLAYER', () => engine.renamePlayer('mill', ' '))
     engine.addPlayer({ id: 'john', name: 'John' })
+    expectCode('DUPLICATE_PLAYER_NAME', () =>
+      engine.renamePlayer('john', 'MILL'),
+    )
     expectCode('PLAYER_LIMIT', () =>
       engine.addPlayer({ id: 'jane', name: 'Jane' }),
     )

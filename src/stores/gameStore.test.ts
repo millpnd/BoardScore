@@ -62,6 +62,49 @@ const setupActiveStore = async () => {
 }
 
 describe('game store', () => {
+  it('sets up and persists a complete active game atomically', async () => {
+    const storage = new MemorySessionStorage()
+    const store = createGameStore({
+      sessionEngine: new SessionEngine(),
+      storage,
+    })
+
+    expect(
+      await store.getState().setupGame({
+        sessionId: 'session-1',
+        templateId: 'scrabble',
+        players: [
+          { id: 'mill', name: 'Mill' },
+          { id: 'john', name: 'John' },
+        ],
+        startedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ).toBe(true)
+    expect(store.getState()).toMatchObject({
+      isGameActive: true,
+      players: [{ name: 'Mill' }, { name: 'John' }],
+    })
+    expect(storage.saves).toBe(1)
+  })
+
+  it('rolls back invalid setup instead of retaining a partial session', async () => {
+    const store = createGameStore({
+      sessionEngine: new SessionEngine(),
+      storage: new MemorySessionStorage(),
+    })
+
+    expect(
+      await store.getState().setupGame({
+        sessionId: 'session-1',
+        templateId: 'scrabble',
+        players: [{ id: 'mill', name: 'Mill' }],
+        startedAt: 'now',
+      }),
+    ).toBe(false)
+    expect(store.getState().session).toBeUndefined()
+    expect(store.getState().error).toContain('At least 2 players')
+  })
+
   it('creates sessions, manages setup players, and persists each change', async () => {
     const storage = new MemorySessionStorage()
     const store = createGameStore({
@@ -134,6 +177,10 @@ describe('game store', () => {
       sessionEngine: new SessionEngine(),
       storage,
     })
+
+    expect(await recovered.getState().checkForRecoverableSession()).toBe(true)
+    expect(recovered.getState().session).toBeUndefined()
+    expect(recovered.getState().recoverableSession?.id).toBe('session-1')
 
     expect(await recovered.getState().resumeSession()).toBe(true)
     expect(recovered.getState()).toMatchObject({
