@@ -10,8 +10,11 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'v8',
-      include: ['src/{engine,services}/**/*.ts'],
-      exclude: ['src/{engine,services}/**/index.ts'],
+      include: ['src/{engine,services,stores}/**/*.ts'],
+      exclude: [
+        'src/{engine,services,stores}/**/index.ts',
+        'src/stores/dependencies.ts',
+      ],
       thresholds: {
         lines: 90,
         functions: 90,
