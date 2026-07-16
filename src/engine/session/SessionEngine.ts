@@ -104,6 +104,39 @@ export class SessionEngine {
     })
   }
 
+  resumeSession(session: GameSession): GameSession {
+    if (this.currentSession) {
+      throw new SessionEngineError(
+        'SESSION_ALREADY_EXISTS',
+        `Session "${this.currentSession.id}" already exists.`,
+      )
+    }
+    if (session.status === GameSessionStatus.Completed) {
+      throw new SessionEngineError(
+        'INVALID_TRANSITION',
+        'A completed game session cannot be resumed.',
+      )
+    }
+
+    try {
+      this.scoreEngine.recalculate(session)
+    } catch (error) {
+      throw new SessionEngineError(
+        'INVALID_SESSION',
+        'Persisted game session is invalid.',
+        error,
+      )
+    }
+
+    this.undoEngine.clearHistory()
+    return this.commit(session)
+  }
+
+  discardSession(): void {
+    this.currentSession = undefined
+    this.undoEngine.clearHistory()
+  }
+
   addPlayer(player: Player): GameSession {
     const session = this.requirePlayerSetup()
     this.requireValidPlayer(player)
@@ -348,6 +381,10 @@ export class SessionEngine {
         error,
       )
     }
+  }
+
+  canUndo(): boolean {
+    return this.undoEngine.canUndo()
   }
 
   getCurrentStandings(): readonly WinnerStanding[] {

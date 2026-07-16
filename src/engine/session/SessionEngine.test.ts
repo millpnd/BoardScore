@@ -161,6 +161,43 @@ describe('SessionEngine lifecycle', () => {
     })
     expect(engine.getSnapshot()?.session.id).toBe('session-1')
   })
+
+  it('resumes a valid persisted session and discards it safely', () => {
+    const source = startGame()
+    source.addScore(score('one', 'mill', 10), action('add-one'))
+    const persisted = source.getCurrentSession()!
+    const engine = createEngine()
+
+    const resumed = engine.resumeSession(persisted)
+
+    expect(resumed).toEqual(persisted)
+    expect(engine.canUndo()).toBe(false)
+    ;(
+      persisted as unknown as { players: { name: string }[] }
+    ).players[0]!.name = 'Changed'
+    expect(engine.getCurrentSession()?.players[0]?.name).toBe('Mill')
+
+    engine.discardSession()
+    expect(engine.getCurrentSession()).toBeUndefined()
+  })
+
+  it('rejects invalid and completed persisted sessions', () => {
+    const source = startGame()
+    source.addScore(score('one', 'mill', 10), action('add-one'))
+    const active = source.getCurrentSession()!
+    const engine = createEngine()
+
+    expectCode('INVALID_SESSION', () =>
+      engine.resumeSession({ ...active, players: [] }),
+    )
+    expectCode('INVALID_TRANSITION', () =>
+      engine.resumeSession({
+        ...active,
+        status: GameSessionStatus.Completed,
+        completedAt: '2026-01-01T01:00:00.000Z',
+      }),
+    )
+  })
 })
 
 describe('SessionEngine player management', () => {
