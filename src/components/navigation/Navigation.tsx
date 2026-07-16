@@ -1,5 +1,5 @@
-import { Box, Group, Text, Title } from '@mantine/core'
-import { ArrowLeft } from 'lucide-react'
+import { Box, Group, Text, ThemeIcon, Title } from '@mantine/core'
+import { ArrowLeft, Dices } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { IconButton } from '../buttons'
@@ -10,6 +10,21 @@ export interface HeaderProps {
   readonly subtitle?: string
   readonly leading?: ReactNode
   readonly actions?: ReactNode
+}
+
+export function BrandMark({ compact = false }: { readonly compact?: boolean }) {
+  return (
+    <Group aria-label="BoardScore" gap="sm" wrap="nowrap">
+      <ThemeIcon color="boardBlue" radius="xl" size={compact ? 44 : 64}>
+        <Dices aria-hidden size={compact ? 24 : 34} />
+      </ThemeIcon>
+      {compact ? null : (
+        <Title order={1} size="2rem">
+          BoardScore
+        </Title>
+      )}
+    </Group>
+  )
 }
 
 export function Header({ title, subtitle, leading, actions }: HeaderProps) {

@@ -9,6 +9,7 @@ export {
   type GameStoreDependencies,
   type GameStoreState,
   type PlayerTotal,
+  type SetupGameInput,
 } from './gameStore'
 export {
   createSettingsStore,

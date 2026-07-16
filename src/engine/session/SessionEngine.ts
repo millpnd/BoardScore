@@ -146,6 +146,7 @@ export class SessionEngine {
         `Player "${player.id}" already exists.`,
       )
     }
+    this.requireUniquePlayerName(session, player.name)
     const maximum = session.template.maximumPlayers
     if (maximum !== null && session.players.length >= maximum) {
       throw new SessionEngineError(
@@ -178,6 +179,7 @@ export class SessionEngine {
         'Player name must be a non-empty string.',
       )
     }
+    this.requireUniquePlayerName(session, name, playerId)
 
     return this.commit({
       ...session,
@@ -508,6 +510,26 @@ export class SessionEngine {
       throw new SessionEngineError(
         'PLAYER_NOT_FOUND',
         `Player "${playerId}" was not found.`,
+      )
+    }
+  }
+
+  private requireUniquePlayerName(
+    session: GameSession,
+    name: string,
+    ignoredPlayerId?: EntityId,
+  ): void {
+    const normalizedName = name.trim().toLocaleLowerCase()
+    if (
+      session.players.some(
+        (player) =>
+          player.id !== ignoredPlayerId &&
+          player.name.trim().toLocaleLowerCase() === normalizedName,
+      )
+    ) {
+      throw new SessionEngineError(
+        'DUPLICATE_PLAYER_NAME',
+        `Player name "${name.trim()}" is already in use.`,
       )
     }
   }

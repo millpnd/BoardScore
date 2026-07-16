@@ -1,5 +1,6 @@
 export {
   GameCard,
+  GameTemplateIcon,
   PlayerCard,
   ScoreCard,
   type GameCardProps,

@@ -51,6 +51,7 @@ export interface ResumeSessionDialogProps {
   readonly opened: boolean
   readonly gameName: string
   readonly detail?: string
+  readonly players?: readonly string[]
   readonly onResume: () => void
   readonly onDiscard: () => void
 }
@@ -59,6 +60,7 @@ export function ResumeSessionDialog({
   opened,
   gameName,
   detail,
+  players = [],
   onResume,
   onDiscard,
 }: ResumeSessionDialogProps) {
@@ -76,6 +78,9 @@ export function ResumeSessionDialog({
           Continue <strong>{gameName}</strong>?
         </Text>
         {detail ? <Text c="dimmed">{detail}</Text> : null}
+        {players.length > 0 ? (
+          <Text size="sm">Players: {players.join(', ')}</Text>
+        ) : null}
         <PrimaryButton onClick={onResume}>Resume game</PrimaryButton>
         <SecondaryButton color="red" onClick={onDiscard}>
           Discard game

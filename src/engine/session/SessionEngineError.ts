@@ -1,5 +1,6 @@
 export type SessionEngineErrorCode =
   | 'DUPLICATE_PLAYER'
+  | 'DUPLICATE_PLAYER_NAME'
   | 'INVALID_PLAYER'
   | 'INVALID_ROUND'
   | 'INVALID_SCORE_OPERATION'

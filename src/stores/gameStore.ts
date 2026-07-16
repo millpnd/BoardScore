@@ -20,6 +20,7 @@ export interface GameStoreDependencies {
 
 export interface GameStoreState {
   readonly session: GameSession | undefined
+  readonly recoverableSession: GameSession | undefined
   readonly currentRound: Round | undefined
   readonly players: readonly Player[]
   readonly currentStandings: readonly WinnerStanding[]
@@ -31,6 +32,8 @@ export interface GameStoreState {
   readonly isLoading: boolean
   readonly error: string | null
   createSession(input: CreateSessionInput): Promise<boolean>
+  setupGame(input: SetupGameInput): Promise<boolean>
+  checkForRecoverableSession(): Promise<boolean>
   resumeSession(): Promise<boolean>
   discardSession(): Promise<boolean>
   addPlayer(player: Player): Promise<boolean>
@@ -53,9 +56,17 @@ export interface PlayerTotal {
   readonly total: number
 }
 
+export interface SetupGameInput {
+  readonly sessionId: EntityId
+  readonly templateId: EntityId
+  readonly players: readonly Player[]
+  readonly startedAt: string
+}
+
 type GameProjection = Pick<
   GameStoreState,
   | 'session'
+  | 'recoverableSession'
   | 'currentRound'
   | 'players'
   | 'currentStandings'
@@ -68,6 +79,7 @@ type GameProjection = Pick<
 
 const emptyState: GameProjection = {
   session: undefined,
+  recoverableSession: undefined,
   currentRound: undefined,
   players: [],
   currentStandings: [],
@@ -82,7 +94,7 @@ export const createGameStore = ({
   sessionEngine,
   storage,
 }: GameStoreDependencies): StoreApi<GameStoreState> =>
-  createStore<GameStoreState>((set) => {
+  createStore<GameStoreState>((set, get) => {
     const engineState = (): GameProjection => {
       const session = sessionEngine.getCurrentSession()
       if (!session) return emptyState
@@ -90,6 +102,7 @@ export const createGameStore = ({
       const currentStandings = sessionEngine.getCurrentStandings()
       return {
         session,
+        recoverableSession: undefined,
         currentRound: sessionEngine.getCurrentRound(),
         players: session.players,
         currentStandings,
@@ -144,10 +157,41 @@ export const createGameStore = ({
         execute(() => {
           sessionEngine.createSession(input)
         }),
+      setupGame: async ({ sessionId, templateId, players, startedAt }) => {
+        set({ isLoading: true, error: null })
+        try {
+          sessionEngine.createSession({ id: sessionId, templateId })
+          for (const player of players) sessionEngine.addPlayer(player)
+          sessionEngine.startGame(startedAt)
+          await persistCurrent()
+          set({ ...engineState(), isLoading: false })
+          return true
+        } catch (error) {
+          sessionEngine.discardSession()
+          set({
+            ...emptyState,
+            isLoading: false,
+            error: getErrorMessage(error),
+          })
+          return false
+        }
+      },
+      checkForRecoverableSession: async () => {
+        set({ isLoading: true, error: null })
+        try {
+          const recoverableSession = (await storage.loadSession()) ?? undefined
+          set({ recoverableSession, isLoading: false })
+          return recoverableSession !== undefined
+        } catch (error) {
+          set({ isLoading: false, error: getErrorMessage(error) })
+          return false
+        }
+      },
       resumeSession: async () => {
         set({ isLoading: true, error: null })
         try {
-          const session = await storage.loadSession()
+          const session =
+            get().recoverableSession ?? (await storage.loadSession())
           if (!session) {
             set({ ...emptyState, isLoading: false })
             return false
