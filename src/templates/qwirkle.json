@@ -1,0 +1,16 @@
+{
+  "id": "qwirkle",
+  "name": "Qwirkle",
+  "description": "Track points earned from tile placements.",
+  "icon": "shapes",
+  "minimumPlayers": 2,
+  "maximumPlayers": 4,
+  "scoringType": "running-total",
+  "winnerRule": "highest-score",
+  "roundConfiguration": {
+    "type": "unlimited"
+  },
+  "theme": "violet",
+  "isBuiltIn": true,
+  "version": 1
+}

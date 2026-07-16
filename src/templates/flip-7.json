@@ -1,0 +1,16 @@
+{
+  "id": "flip-7",
+  "name": "Flip 7",
+  "description": "Record each player's score after every round.",
+  "icon": "cards",
+  "minimumPlayers": 3,
+  "maximumPlayers": 18,
+  "scoringType": "per-round",
+  "winnerRule": "highest-score",
+  "roundConfiguration": {
+    "type": "unlimited"
+  },
+  "theme": "orange",
+  "isBuiltIn": true,
+  "version": 1
+}
