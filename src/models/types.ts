@@ -25,6 +25,7 @@ export enum ScoreEventType {
 }
 
 export enum GameSessionStatus {
+  NotStarted = 'not-started',
   Active = 'active',
   Completed = 'completed',
 }
