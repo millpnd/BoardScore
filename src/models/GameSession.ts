@@ -14,6 +14,6 @@ export interface GameSession {
   readonly rounds: readonly Round[]
   readonly scoreEvents: readonly ScoreEvent[]
   readonly status: GameSessionStatus
-  readonly startedAt: IsoDateTime
+  readonly startedAt?: IsoDateTime
   readonly completedAt?: IsoDateTime
 }

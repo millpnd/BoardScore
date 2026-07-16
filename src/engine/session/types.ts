@@ -1,0 +1,29 @@
+import type { EntityId, GameSession, IsoDateTime, Round } from '../../models'
+import type { UndoMetadata } from '../undo'
+import type { WinnerResult } from '../winner'
+
+export interface CreateSessionInput {
+  readonly id: EntityId
+  readonly templateId: EntityId
+}
+
+export interface ActionContext {
+  readonly id: EntityId
+  readonly timestamp: IsoDateTime
+  readonly metadata?: UndoMetadata
+}
+
+export interface NextRoundInput {
+  readonly id: EntityId
+  readonly startedAt: IsoDateTime
+}
+
+export interface EndGameResult {
+  readonly session: GameSession
+  readonly winner: WinnerResult
+}
+
+export interface SessionSnapshot {
+  readonly session: GameSession
+  readonly currentRound: Round | undefined
+}

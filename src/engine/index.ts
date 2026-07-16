@@ -1,4 +1,5 @@
 export * from './score'
+export * from './session'
 export * from './template'
 export * from './undo'
 export * from './winner'
