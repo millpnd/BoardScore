@@ -1,12 +1,209 @@
 @import 'tailwindcss';
 
 :root {
-  font-family: Inter, system-ui, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   color-scheme: light dark;
+  --boardscore-touch-target: 3rem;
+  --boardscore-content-width: 64rem;
+  --boardscore-page-gutter: clamp(1rem, 3vw, 2rem);
+  --boardscore-motion-fast: 140ms;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
 }
 
 body {
-  margin: 0;
-  min-width: 320px;
   min-height: 100dvh;
+  background: light-dark(
+    var(--mantine-color-gray-0),
+    var(--mantine-color-dark-8)
+  );
+}
+
+:focus-visible {
+  outline: 3px solid var(--mantine-color-boardBlue-5);
+  outline-offset: 3px;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  min-height: 100dvh;
+  background:
+    radial-gradient(
+      circle at top right,
+      light-dark(rgb(67 123 255 / 0.08), rgb(79 131 255 / 0.1)),
+      transparent 30rem
+    ),
+    light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+}
+
+.page-container {
+  width: 100%;
+  padding-inline: var(--boardscore-page-gutter);
+}
+
+.scrollable-content {
+  min-width: 0;
+}
+
+.app-header {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  padding-block: 0.75rem;
+  border-bottom: 1px solid
+    light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
+  background: light-dark(rgb(255 255 255 / 0.92), rgb(26 27 30 / 0.92));
+  backdrop-filter: blur(12px);
+}
+
+.app-footer {
+  padding-block: 1.25rem 6.5rem;
+}
+
+.bottom-action-bar {
+  position: fixed;
+  z-index: 30;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding-block: 0.75rem max(0.75rem, env(safe-area-inset-bottom));
+  border-top: 1px solid
+    light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
+  background: light-dark(rgb(255 255 255 / 0.96), rgb(26 27 30 / 0.96));
+  backdrop-filter: blur(12px);
+}
+
+.toolbar {
+  min-height: var(--boardscore-touch-target);
+}
+
+.interactive-card {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: initial;
+  cursor: pointer;
+  transition:
+    transform var(--boardscore-motion-fast) ease,
+    box-shadow var(--boardscore-motion-fast) ease,
+    border-color var(--boardscore-motion-fast) ease;
+}
+
+.interactive-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+.interactive-card:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.interactive-card[data-selected] {
+  border-color: var(--mantine-color-boardBlue-6);
+  box-shadow: 0 0 0 2px
+    light-dark(
+      var(--mantine-color-boardBlue-1),
+      var(--mantine-color-boardBlue-8)
+    );
+}
+
+.player-card[data-highlighted] {
+  border-color: var(--mantine-color-yellow-5);
+  background: light-dark(var(--mantine-color-yellow-0), rgb(60 47 12 / 0.45));
+}
+
+.score-value,
+.keypad-display {
+  font-variant-numeric: tabular-nums;
+}
+
+.score-card[data-accent='positive'] {
+  border-color: var(--mantine-color-tableGreen-5);
+}
+
+.score-card[data-accent='negative'] {
+  border-color: var(--mantine-color-red-5);
+}
+
+.unstyled-list,
+.game-list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.empty-state {
+  min-height: 14rem;
+  padding: 1.5rem;
+}
+
+.numeric-keypad {
+  width: min(100%, 28rem);
+  margin-inline: auto;
+}
+
+.numeric-keypad .mantine-Button-root {
+  min-height: 3.75rem;
+  font-size: 1.25rem;
+}
+
+.keypad-display {
+  min-height: 3.5rem;
+  overflow: hidden;
+  font-size: clamp(2rem, 7vw, 3rem);
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.keypad-display[data-empty] {
+  color: var(--mantine-color-dimmed);
+}
+
+.mantine-Input-input {
+  min-height: var(--boardscore-touch-target);
+}
+
+@media (max-width: 47.99em) {
+  :root {
+    --boardscore-touch-target: 3.25rem;
+  }
+
+  .bottom-action-bar .mantine-Group-root {
+    flex-direction: column-reverse;
+  }
+
+  .bottom-action-bar .mantine-Button-root {
+    width: 100%;
+  }
+}
+
+@media (min-width: 64em) {
+  .app-layout {
+    background-size: 70rem 70rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
