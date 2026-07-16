@@ -8,11 +8,16 @@ export default defineConfig({
     },
   },
   test: {
+    setupFiles: ['./src/test/setup.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/{engine,services,stores}/**/*.ts'],
+      include: [
+        'src/{engine,services,stores}/**/*.ts',
+        'src/components/**/*.tsx',
+      ],
       exclude: [
         'src/{engine,services,stores}/**/index.ts',
+        'src/components/**/index.ts',
         'src/stores/dependencies.ts',
       ],
       thresholds: {
