@@ -18,6 +18,13 @@ export interface NextRoundInput {
   readonly startedAt: IsoDateTime
 }
 
+export interface PlayerScoreInput {
+  readonly id: EntityId
+  readonly playerId: EntityId
+  readonly points: number
+  readonly createdAt: IsoDateTime
+}
+
 export interface EndGameResult {
   readonly session: GameSession
   readonly winner: WinnerResult

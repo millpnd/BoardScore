@@ -8,5 +8,6 @@ export type {
   CreateSessionInput,
   EndGameResult,
   NextRoundInput,
+  PlayerScoreInput,
   SessionSnapshot,
 } from './types'

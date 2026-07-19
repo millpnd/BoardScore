@@ -326,6 +326,55 @@ describe('SessionEngine rounds', () => {
 })
 
 describe('SessionEngine engine coordination', () => {
+  it('records running-total player scores without assigning a round', () => {
+    const engine = startGame()
+
+    engine.addPlayerScore(
+      {
+        id: 'one',
+        playerId: 'mill',
+        points: 12,
+        createdAt: '2026-01-01T00:01:00.000Z',
+      },
+      action('add-one'),
+    )
+
+    expect(engine.getCurrentSession()?.scoreEvents[0]).toMatchObject({
+      playerId: 'mill',
+      points: 12,
+      roundId: undefined,
+    })
+  })
+
+  it('assigns per-round player scores and exposes round projections', () => {
+    const engine = startGame(
+      createEngine(customTemplate({ scoringType: ScoringType.PerRound })),
+    )
+    expectCode('INVALID_ROUND', () =>
+      engine.addPlayerScore(
+        {
+          id: 'one',
+          playerId: 'mill',
+          points: 10,
+          createdAt: 'time',
+        },
+        action('add-one'),
+      ),
+    )
+    engine.nextRound({ id: 'round-1', startedAt: 'time' })
+
+    engine.addPlayerScore(
+      { id: 'one', playerId: 'mill', points: 10, createdAt: 'time' },
+      action('add-one'),
+    )
+
+    expect(engine.getCurrentSession()?.scoreEvents[0]?.roundId).toBe('round-1')
+    expect(engine.getCurrentRoundScores()).toMatchObject([
+      { playerId: 'mill', total: 10 },
+      { playerId: 'john', total: 0 },
+    ])
+  })
+
   it('coordinates score entry and WinnerEngine standings', () => {
     const engine = startGame()
     engine.addScore(score('one', 'mill', 12), action('add-one'))

@@ -6,8 +6,13 @@ import type {
   Round,
   ScoreEvent,
 } from '../../models'
-import { GameSessionStatus, RoundType } from '../../models'
-import { ScoreEngine } from '../score'
+import {
+  GameSessionStatus,
+  RoundType,
+  ScoringType,
+  ScoreEventType,
+} from '../../models'
+import { ScoreEngine, type PlayerTotal } from '../score'
 import { TemplateEngine } from '../template'
 import {
   UndoActionType,
@@ -22,6 +27,7 @@ import type {
   CreateSessionInput,
   EndGameResult,
   NextRoundInput,
+  PlayerScoreInput,
   SessionSnapshot,
 } from './types'
 
@@ -317,6 +323,35 @@ export class SessionEngine {
     )
   }
 
+  addPlayerScore(input: PlayerScoreInput, context: ActionContext): GameSession {
+    const session = this.requireActiveSession()
+    const currentRound = session.rounds.at(-1)
+    if (
+      session.template.scoringType === ScoringType.PerRound &&
+      !currentRound
+    ) {
+      throw new SessionEngineError(
+        'INVALID_ROUND',
+        'Per-round scoring requires a current round.',
+      )
+    }
+
+    return this.addScore(
+      {
+        id: input.id,
+        playerId: input.playerId,
+        roundId:
+          session.template.scoringType === ScoringType.PerRound
+            ? currentRound?.id
+            : undefined,
+        type: ScoreEventType.Score,
+        points: input.points,
+        createdAt: input.createdAt,
+      },
+      context,
+    )
+  }
+
   updateScore(event: ScoreEvent, context: ActionContext): GameSession {
     const session = this.requireActiveSession()
     const previousEvent = session.scoreEvents.find(({ id }) => id === event.id)
@@ -391,6 +426,14 @@ export class SessionEngine {
 
   getCurrentStandings(): readonly WinnerStanding[] {
     return this.evaluateWinner(this.requireSession()).standings
+  }
+
+  getCurrentRoundScores(): readonly PlayerTotal[] {
+    const session = this.requireSession()
+    const currentRound = session.rounds.at(-1)
+    return currentRound
+      ? this.scoreEngine.getRoundScores(session, currentRound.id)
+      : []
   }
 
   getWinner(): WinnerStanding | undefined {

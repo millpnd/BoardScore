@@ -78,6 +78,7 @@ describe('game store', () => {
           { id: 'john', name: 'John' },
         ],
         startedAt: '2026-01-01T00:00:00.000Z',
+        initialRoundId: 'round-1',
       }),
     ).toBe(true)
     expect(store.getState()).toMatchObject({
@@ -85,6 +86,9 @@ describe('game store', () => {
       players: [{ name: 'Mill' }, { name: 'John' }],
     })
     expect(storage.saves).toBe(1)
+    expect(storage.session?.rounds).toMatchObject([
+      { id: 'round-1', number: 1 },
+    ])
   })
 
   it('rolls back invalid setup instead of retaining a partial session', async () => {
@@ -99,6 +103,7 @@ describe('game store', () => {
         templateId: 'scrabble',
         players: [{ id: 'mill', name: 'Mill' }],
         startedAt: 'now',
+        initialRoundId: 'round-1',
       }),
     ).toBe(false)
     expect(store.getState().session).toBeUndefined()
@@ -154,6 +159,26 @@ describe('game store', () => {
     await store.getState().undoLastAction()
     expect(store.getState().session?.scoreEvents[0]?.points).toBe(20)
     expect(storage.session?.scoreEvents[0]?.points).toBe(20)
+  })
+
+  it('records player scores through SessionEngine and persists projections', async () => {
+    const { store, storage } = await setupActiveStore()
+
+    expect(
+      await store.getState().recordScore({
+        eventId: 'score-1',
+        actionId: 'add-score-1',
+        playerId: 'mill',
+        points: 14,
+        timestamp: '2026-01-01T00:10:00.000Z',
+      }),
+    ).toBe(true)
+
+    expect(store.getState().playerTotals[0]).toMatchObject({
+      playerId: 'mill',
+      total: 14,
+    })
+    expect(storage.session?.scoreEvents[0]?.points).toBe(14)
   })
 
   it('advances rounds and exposes the current round', async () => {

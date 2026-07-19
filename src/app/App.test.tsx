@@ -72,7 +72,8 @@ describe('game setup routes', () => {
     expect(
       await screen.findByRole('heading', { name: 'Scrabble' }),
     ).toBeVisible()
-    expect(screen.getByText('Mill · John')).toBeVisible()
+    expect(screen.getByRole('button', { name: /Mill/ })).toBeVisible()
+    expect(screen.getByRole('button', { name: /John/ })).toBeVisible()
   })
 
   it('discards a persisted game only after confirmation', async () => {
@@ -113,7 +114,7 @@ describe('game setup routes', () => {
     expect(screen.getByText('Qwirkle')).toBeVisible()
   })
 
-  it('completes Home to scoring-placeholder setup through real stores', async () => {
+  it('completes Home to scoring setup through real stores', async () => {
     const user = userEvent.setup()
     const { storage } = renderRoute('/games')
 
@@ -124,15 +125,14 @@ describe('game setup routes', () => {
     await user.click(screen.getByRole('button', { name: 'Start game' }))
 
     expect(
-      await screen.findByRole('heading', { name: 'Game ready' }),
+      await screen.findByRole('heading', { name: 'Scrabble' }),
     ).toBeVisible()
-    expect(
-      screen.getByText('Scoring screen arrives in the next milestone.'),
-    ).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Standings' })).toBeVisible()
     expect(storage.session?.players.map(({ name }) => name)).toEqual([
       'Mill',
       'John',
     ])
+    expect(storage.session?.rounds).toHaveLength(1)
   })
 
   it('adds and removes player fields without imposing a UI maximum', async () => {

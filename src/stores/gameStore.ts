@@ -26,6 +26,7 @@ export interface GameStoreState {
   readonly currentStandings: readonly WinnerStanding[]
   readonly currentWinner: WinnerStanding | undefined
   readonly playerTotals: readonly PlayerTotal[]
+  readonly currentRoundScores: readonly PlayerTotal[]
   readonly isGameActive: boolean
   readonly canUndo: boolean
   readonly hasActiveSession: boolean
@@ -44,6 +45,7 @@ export interface GameStoreState {
   resetScores(newSessionId: EntityId): Promise<boolean>
   nextRound(input: NextRoundInput): Promise<boolean>
   addScore(event: ScoreEvent, context: ActionContext): Promise<boolean>
+  recordScore(input: RecordScoreInput): Promise<boolean>
   updateScore(event: ScoreEvent, context: ActionContext): Promise<boolean>
   removeScore(eventId: EntityId, context: ActionContext): Promise<boolean>
   undoLastAction(): Promise<boolean>
@@ -61,6 +63,15 @@ export interface SetupGameInput {
   readonly templateId: EntityId
   readonly players: readonly Player[]
   readonly startedAt: string
+  readonly initialRoundId: EntityId
+}
+
+export interface RecordScoreInput {
+  readonly eventId: EntityId
+  readonly actionId: EntityId
+  readonly playerId: EntityId
+  readonly points: number
+  readonly timestamp: string
 }
 
 type GameProjection = Pick<
@@ -72,6 +83,7 @@ type GameProjection = Pick<
   | 'currentStandings'
   | 'currentWinner'
   | 'playerTotals'
+  | 'currentRoundScores'
   | 'isGameActive'
   | 'canUndo'
   | 'hasActiveSession'
@@ -85,6 +97,7 @@ const emptyState: GameProjection = {
   currentStandings: [],
   currentWinner: undefined,
   playerTotals: [],
+  currentRoundScores: [],
   isGameActive: false,
   canUndo: false,
   hasActiveSession: false,
@@ -114,6 +127,7 @@ export const createGameStore = ({
             total,
           }),
         ),
+        currentRoundScores: sessionEngine.getCurrentRoundScores(),
         isGameActive: session.status === GameSessionStatus.Active,
         canUndo: sessionEngine.canUndo(),
         hasActiveSession: session.status !== GameSessionStatus.Completed,
@@ -157,12 +171,19 @@ export const createGameStore = ({
         execute(() => {
           sessionEngine.createSession(input)
         }),
-      setupGame: async ({ sessionId, templateId, players, startedAt }) => {
+      setupGame: async ({
+        sessionId,
+        templateId,
+        players,
+        startedAt,
+        initialRoundId,
+      }) => {
         set({ isLoading: true, error: null })
         try {
           sessionEngine.createSession({ id: sessionId, templateId })
           for (const player of players) sessionEngine.addPlayer(player)
           sessionEngine.startGame(startedAt)
+          sessionEngine.nextRound({ id: initialRoundId, startedAt })
           await persistCurrent()
           set({ ...engineState(), isLoading: false })
           return true
@@ -251,6 +272,13 @@ export const createGameStore = ({
       addScore: (event, context) =>
         execute(() => {
           sessionEngine.addScore(event, context)
+        }),
+      recordScore: ({ eventId, actionId, playerId, points, timestamp }) =>
+        execute(() => {
+          sessionEngine.addPlayerScore(
+            { id: eventId, playerId, points, createdAt: timestamp },
+            { id: actionId, timestamp },
+          )
         }),
       updateScore: (event, context) =>
         execute(() => {

@@ -5,7 +5,7 @@ import {
   HomePage,
   NotFoundPage,
   PlayerSetupPage,
-  ScoringPlaceholderPage,
+  ScoringPage,
 } from '@/pages'
 
 import { StoreProvider } from './StoreProvider'
@@ -24,7 +24,7 @@ export function AppRoutes() {
       <Route element={<HomePage />} path="/" />
       <Route element={<GameSelectionPage />} path="/games" />
       <Route element={<PlayerSetupPage />} path="/players" />
-      <Route element={<ScoringPlaceholderPage />} path="/scoring" />
+      <Route element={<ScoringPage />} path="/scoring" />
       <Route element={<NotFoundPage />} path="*" />
     </Routes>
   )

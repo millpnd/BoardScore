@@ -7,3 +7,7 @@ export {
   type PlayerCardProps,
   type ScoreCardProps,
 } from './Cards'
+export {
+  ScoringPlayerCard,
+  type ScoringPlayerCardProps,
+} from './ScoringPlayerCard'
