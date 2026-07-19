@@ -9,5 +9,6 @@ export type {
   EndGameResult,
   NextRoundInput,
   PlayerScoreInput,
+  RestartSessionInput,
   SessionSnapshot,
 } from './types'

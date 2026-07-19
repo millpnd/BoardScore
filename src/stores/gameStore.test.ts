@@ -246,6 +246,102 @@ describe('game store', () => {
     expect(storage.session?.id).toBe('session-2')
   })
 
+  it('exposes tied final results and restarts with retained players', async () => {
+    const { store, storage } = await setupActiveStore()
+    await store.getState().addScore(score(12), action('add-mill'))
+    await store
+      .getState()
+      .addScore(
+        { ...score(12), id: 'score-2', playerId: 'john' },
+        action('add-john'),
+      )
+
+    await store.getState().endGame('2026-01-01T01:00:00.000Z')
+
+    expect(store.getState().winnerResult).toMatchObject({
+      isTie: true,
+      winners: [
+        { playerId: 'mill', rank: 1, total: 12 },
+        { playerId: 'john', rank: 1, total: 12 },
+      ],
+    })
+    expect(storage.session).toBeNull()
+
+    expect(
+      await store.getState().restartGame({
+        sessionId: 'session-2',
+        startedAt: '2026-01-02T00:00:00.000Z',
+        initialRoundId: 'round-1',
+      }),
+    ).toBe(true)
+    expect(store.getState()).toMatchObject({
+      canUndo: false,
+      isGameActive: true,
+      players: [{ name: 'Mill' }, { name: 'Johnny' }],
+      session: {
+        id: 'session-2',
+        scoreEvents: [],
+        rounds: [{ id: 'round-1', number: 1 }],
+      },
+    })
+    expect(storage.session?.id).toBe('session-2')
+  })
+
+  it('restarts with edited players and does not retain completed scores', async () => {
+    const { store } = await setupActiveStore()
+    await store.getState().addScore(score(), action('add-score'))
+    await store.getState().endGame('2026-01-01T01:00:00.000Z')
+
+    expect(
+      await store.getState().restartGame({
+        sessionId: 'session-2',
+        players: [
+          { id: 'john', name: 'Johnny' },
+          { id: 'jane', name: 'Jane' },
+        ],
+        startedAt: '2026-01-02T00:00:00.000Z',
+        initialRoundId: 'round-1',
+      }),
+    ).toBe(true)
+    expect(store.getState().session).toMatchObject({
+      players: [{ name: 'Johnny' }, { name: 'Jane' }],
+      scoreEvents: [],
+    })
+  })
+
+  it('keeps lifecycle transitions usable when persistence fails', async () => {
+    const completed = await setupActiveStore()
+    completed.storage.deleteSession = async () => {
+      throw new Error('Cleanup unavailable')
+    }
+
+    expect(
+      await completed.store.getState().endGame('2026-01-01T01:00:00.000Z'),
+    ).toBe(true)
+    expect(completed.store.getState()).toMatchObject({
+      error: 'Cleanup unavailable',
+      session: { status: GameSessionStatus.Completed },
+    })
+
+    const replay = await setupActiveStore()
+    await replay.store.getState().endGame('2026-01-01T01:00:00.000Z')
+    replay.storage.saveSession = async () => {
+      throw new Error('Storage unavailable')
+    }
+
+    expect(
+      await replay.store.getState().restartGame({
+        sessionId: 'session-2',
+        startedAt: '2026-01-02T00:00:00.000Z',
+        initialRoundId: 'round-1',
+      }),
+    ).toBe(true)
+    expect(replay.store.getState()).toMatchObject({
+      error: 'Storage unavailable',
+      session: { status: GameSessionStatus.Active },
+    })
+  })
+
   it('captures engine and storage errors without throwing to callers', async () => {
     const storage = new MemorySessionStorage()
     const store = createGameStore({

@@ -127,6 +127,57 @@ body {
   padding-bottom: 2rem;
 }
 
+.winner-page {
+  padding-bottom: 2rem;
+}
+
+.winner-hero {
+  min-height: 16rem;
+  padding-block: 1rem;
+}
+
+.winner-trophy {
+  animation: winner-entrance 500ms ease-out both;
+}
+
+.winning-score {
+  color: light-dark(
+    var(--mantine-color-tableGreen-8),
+    var(--mantine-color-tableGreen-4)
+  );
+  font-variant-numeric: tabular-nums;
+}
+
+.final-standing {
+  min-height: 4.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid
+    light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
+  border-radius: var(--mantine-radius-md);
+}
+
+.final-standing[data-winner] {
+  border-color: var(--mantine-color-yellow-5);
+  background: light-dark(var(--mantine-color-yellow-0), rgb(60 47 12 / 0.45));
+}
+
+.standing-rank {
+  width: 2rem;
+  text-align: center;
+}
+
+@keyframes winner-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .scoring-player-card {
   width: 100%;
   min-height: 7rem;
