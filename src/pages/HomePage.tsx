@@ -1,5 +1,5 @@
 import { Alert, Center, Group, Stack, Text } from '@mantine/core'
-import { AlertCircle, Plus } from 'lucide-react'
+import { AlertCircle, Plus, Settings2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 
@@ -11,6 +11,7 @@ import {
   PageContainer,
   PrimaryButton,
   ResumeSessionDialog,
+  SecondaryButton,
 } from '@/components'
 import { useGameStore } from '@/app/useStores'
 
@@ -67,6 +68,13 @@ export function HomePage() {
               >
                 New game
               </PrimaryButton>
+              <SecondaryButton
+                fullWidth
+                leftSection={<Settings2 aria-hidden size={20} />}
+                onClick={() => navigate('/templates')}
+              >
+                Custom games
+              </SecondaryButton>
             </Stack>
           </Stack>
         </Center>

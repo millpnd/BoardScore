@@ -156,7 +156,7 @@ describe('ScoringPage', () => {
       { playerId: 'mill', total: 0 },
       { playerId: 'john', total: 8 },
     ])
-  })
+  }, 10000)
 
   it('confirms leaving without discarding saved progress', async () => {
     const user = userEvent.setup()

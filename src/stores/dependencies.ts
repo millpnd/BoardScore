@@ -1,4 +1,5 @@
 import { SessionEngine, TemplateEngine } from '@/engine'
+import { GameSessionStatus } from '@/models'
 import { LocalStorageProvider, StorageService } from '@/services'
 
 import { createGameStore } from './gameStore'
@@ -19,6 +20,16 @@ export const gameStore = createGameStore({
 export const templateStore = createTemplateStore({
   templateEngine,
   storage: storageService,
+  getActiveSession: async () => {
+    const currentSession = sessionEngine.getCurrentSession()
+    if (
+      currentSession &&
+      currentSession.status !== GameSessionStatus.Completed
+    ) {
+      return currentSession
+    }
+    return (await storageService.loadSession()) ?? currentSession
+  },
 })
 
 export const settingsStore = createSettingsStore(storageService)

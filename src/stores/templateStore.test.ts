@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { TemplateEngine } from '@/engine'
+import { SessionEngine, TemplateEngine } from '@/engine'
 import type { GameTemplate } from '@/models'
-import { RoundType, ScoringType, WinnerRule } from '@/models'
+import { GameSessionStatus, RoundType, ScoringType, WinnerRule } from '@/models'
 import type { TemplateStorage } from '@/services'
 
 import { createTemplateStore } from './templateStore'
@@ -128,5 +128,79 @@ describe('template store', () => {
       await store.getState().addTemplate(customTemplate('Duplicate')),
     ).toBe(false)
     expect(engine.getTemplate('custom')?.name).toBe('Custom')
+  })
+
+  it('rejects built-in template updates and deletion through the store', async () => {
+    const store = createTemplateStore({
+      templateEngine: new TemplateEngine(),
+      storage: new MemoryTemplateStorage(),
+    })
+    await store.getState().loadTemplates()
+    const scrabble = store.getState().getTemplate('scrabble')
+    expect(scrabble).toBeDefined()
+
+    expect(
+      await store.getState().updateTemplate({ ...scrabble!, name: 'Changed' }),
+    ).toBe(false)
+    expect(store.getState().error).toContain('Built-in template')
+    store.getState().clearError()
+
+    expect(await store.getState().deleteTemplate('scrabble')).toBe(false)
+    expect(store.getState().error).toContain('Built-in template')
+    expect(store.getState().getTemplate('scrabble')?.name).toBe('Scrabble')
+  })
+
+  it('prevents deleting a custom template used by the active session', async () => {
+    const storage = new MemoryTemplateStorage()
+    storage.templates = [customTemplate()]
+    const templateEngine = new TemplateEngine()
+    const sessionEngine = new SessionEngine({ templateEngine })
+    const store = createTemplateStore({
+      templateEngine,
+      storage,
+      getActiveSession: () => sessionEngine.getCurrentSession(),
+    })
+    await store.getState().loadTemplates()
+    sessionEngine.createSession({ id: 'session-1', templateId: 'custom' })
+    sessionEngine.addPlayer({ id: 'mill', name: 'Mill' })
+    sessionEngine.addPlayer({ id: 'john', name: 'John' })
+    sessionEngine.startGame('2026-01-01T00:00:00.000Z')
+
+    expect(await store.getState().deleteTemplate('custom')).toBe(false)
+    expect(store.getState().error).toContain('active game')
+    expect(store.getState().getTemplate('custom')).toEqual(customTemplate())
+    expect(storage.templates).toEqual([customTemplate()])
+
+    sessionEngine.endGame('2026-01-01T01:00:00.000Z')
+    expect(sessionEngine.getCurrentSession()?.status).toBe(
+      GameSessionStatus.Completed,
+    )
+    store.getState().clearError()
+    expect(await store.getState().deleteTemplate('custom')).toBe(true)
+    expect(store.getState().getTemplate('custom')).toBeUndefined()
+  })
+
+  it('prevents deleting a custom template used by a stored active session', async () => {
+    const storage = new MemoryTemplateStorage()
+    storage.templates = [customTemplate()]
+    const templateEngine = new TemplateEngine()
+    templateEngine.loadTemplates([customTemplate()])
+    const sessionEngine = new SessionEngine({ templateEngine })
+    sessionEngine.createSession({ id: 'session-1', templateId: 'custom' })
+    sessionEngine.addPlayer({ id: 'mill', name: 'Mill' })
+    sessionEngine.addPlayer({ id: 'john', name: 'John' })
+    sessionEngine.startGame('2026-01-01T00:00:00.000Z')
+    const storedActiveSession = sessionEngine.getCurrentSession()
+    sessionEngine.discardSession()
+    const store = createTemplateStore({
+      templateEngine,
+      storage,
+      getActiveSession: async () => storedActiveSession,
+    })
+    await store.getState().loadTemplates()
+
+    expect(await store.getState().deleteTemplate('custom')).toBe(false)
+    expect(store.getState().error).toContain('active game')
+    expect(store.getState().getTemplate('custom')).toEqual(customTemplate())
   })
 })

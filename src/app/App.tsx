@@ -6,6 +6,8 @@ import {
   NotFoundPage,
   PlayerSetupPage,
   ScoringPage,
+  TemplateEditorPage,
+  TemplateManagementPage,
   WinnerPage,
 } from '@/pages'
 
@@ -24,6 +26,12 @@ export function AppRoutes() {
     <Routes>
       <Route element={<HomePage />} path="/" />
       <Route element={<GameSelectionPage />} path="/games" />
+      <Route element={<TemplateManagementPage />} path="/templates" />
+      <Route element={<TemplateEditorPage />} path="/templates/new" />
+      <Route
+        element={<TemplateEditorPage />}
+        path="/templates/:templateId/edit"
+      />
       <Route element={<PlayerSetupPage />} path="/players" />
       <Route element={<ScoringPage />} path="/scoring" />
       <Route element={<WinnerPage />} path="/winner" />

@@ -27,6 +27,10 @@ export interface GameCardProps {
   readonly description: string
   readonly icon: ReactNode
   readonly meta?: string
+  readonly badges?: readonly {
+    readonly label: string
+    readonly color?: string
+  }[]
   readonly selected?: boolean
   readonly onSelect?: () => void
 }
@@ -36,6 +40,7 @@ export function GameCard({
   description,
   icon,
   meta,
+  badges = [],
   selected = false,
   onSelect,
 }: GameCardProps) {
@@ -58,7 +63,16 @@ export function GameCard({
           <Text c="dimmed" lineClamp={2} size="sm">
             {description}
           </Text>
-          {meta ? <Badge variant="light">{meta}</Badge> : null}
+          {meta || badges.length > 0 ? (
+            <Group gap="xs">
+              {meta ? <Badge variant="light">{meta}</Badge> : null}
+              {badges.map((badge) => (
+                <Badge color={badge.color} key={badge.label} variant="light">
+                  {badge.label}
+                </Badge>
+              ))}
+            </Group>
+          ) : null}
         </Stack>
       </Group>
     </Card>

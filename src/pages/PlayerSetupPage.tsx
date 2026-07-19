@@ -38,6 +38,9 @@ export function PlayerSetupPage() {
   const error = useGameStore((state) => state.error)
   const editingCompletedGame = session?.status === GameSessionStatus.Completed
   const template = editingCompletedGame ? session.template : activeTemplate
+  const playerLimitLabel = template?.maximumPlayers
+    ? `Add ${template.minimumPlayers}-${template.maximumPlayers} players.`
+    : `Add at least ${template?.minimumPlayers ?? 2} players.`
   const { control, formState, handleSubmit, register } =
     useForm<PlayerSetupForm>({
       defaultValues: {
@@ -50,6 +53,10 @@ export function PlayerSetupPage() {
     control,
     name: 'players',
   })
+  const canAddPlayer =
+    template?.maximumPlayers === null ||
+    template === undefined ||
+    fields.length < template.maximumPlayers
 
   if (!template) {
     return (
@@ -105,6 +112,7 @@ export function PlayerSetupPage() {
       bottomAction={
         <BottomActionBar>
           <SecondaryButton
+            disabled={!canAddPlayer}
             leftSection={<Plus aria-hidden size={20} />}
             onClick={() => append(newPlayer())}
             type="button"
@@ -143,10 +151,7 @@ export function PlayerSetupPage() {
         >
           <Stack gap={4}>
             <Title order={2}>Who is playing?</Title>
-            <Text c="dimmed">
-              Add at least {template.minimumPlayers} players. Names must be
-              unique.
-            </Text>
+            <Text c="dimmed">{playerLimitLabel} Names must be unique.</Text>
           </Stack>
 
           {error ? (

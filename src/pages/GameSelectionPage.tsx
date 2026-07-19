@@ -1,5 +1,5 @@
 import { Alert, Stack, Text, Title } from '@mantine/core'
-import { AlertCircle, SearchX } from 'lucide-react'
+import { AlertCircle, SearchX, Settings2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 
@@ -13,6 +13,7 @@ import {
   GameListItem,
   GameTemplateIcon,
   Header,
+  IconButton,
   LoadingIndicator,
   PageContainer,
   SearchInput,
@@ -51,6 +52,14 @@ export function GameSelectionPage() {
     <AppLayout
       header={
         <Header
+          actions={
+            <IconButton
+              label="Custom games"
+              onClick={() => navigate('/templates')}
+            >
+              <Settings2 aria-hidden size={20} />
+            </IconButton>
+          }
           leading={<BackButton onClick={() => navigate('/')} />}
           subtitle="Choose a scoring template"
           title="Select a game"
@@ -101,6 +110,11 @@ export function GameSelectionPage() {
                     }
                     name={template.name}
                     onSelect={() => chooseTemplate(template.id)}
+                    badges={
+                      template.isBuiltIn
+                        ? undefined
+                        : [{ label: 'Custom', color: 'tableGreen' }]
+                    }
                   />
                 </GameListItem>
               ))}

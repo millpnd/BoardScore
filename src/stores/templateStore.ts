@@ -1,7 +1,8 @@
 import { createStore, type StoreApi } from 'zustand/vanilla'
 
 import type { TemplateEngine } from '@/engine'
-import type { EntityId, GameTemplate } from '@/models'
+import type { EntityId, GameSession, GameTemplate } from '@/models'
+import { GameSessionStatus } from '@/models'
 import type { TemplateStorage } from '@/services'
 
 import { getErrorMessage } from './storeUtils'
@@ -9,6 +10,8 @@ import { getErrorMessage } from './storeUtils'
 export interface TemplateStoreDependencies {
   readonly templateEngine: TemplateEngine
   readonly storage: TemplateStorage
+  readonly getActiveSession?: () =>
+    GameSession | null | undefined | Promise<GameSession | null | undefined>
 }
 
 export interface TemplateStoreState {
@@ -31,6 +34,7 @@ export interface TemplateStoreState {
 export const createTemplateStore = ({
   templateEngine,
   storage,
+  getActiveSession,
 }: TemplateStoreDependencies): StoreApi<TemplateStoreState> =>
   createStore<TemplateStoreState>((set, get) => {
     const engineState = () => {
@@ -96,6 +100,26 @@ export const createTemplateStore = ({
       }
     }
 
+    const canDeleteTemplate = async (id: EntityId): Promise<boolean> => {
+      set({ isLoading: true, error: null })
+      try {
+        const activeSession = await getActiveSession?.()
+        if (
+          activeSession &&
+          activeSession.status !== GameSessionStatus.Completed &&
+          activeSession?.template.id === id
+        ) {
+          throw new Error(
+            'Finish or discard the active game before deleting this custom template.',
+          )
+        }
+        return true
+      } catch (error) {
+        set({ isLoading: false, error: getErrorMessage(error) })
+        return false
+      }
+    }
+
     return {
       templates: [],
       builtInTemplates: [],
@@ -130,7 +154,8 @@ export const createTemplateStore = ({
           },
         )
       },
-      deleteTemplate: (id) => {
+      deleteTemplate: async (id) => {
+        if (!(await canDeleteTemplate(id))) return false
         const previous = templateEngine.getTemplate(id)
         return mutate(
           () => {

@@ -242,6 +242,15 @@ export const createGameStore = ({
       checkForRecoverableSession: async () => {
         set({ isLoading: true, error: null })
         try {
+          const currentSession = sessionEngine.getCurrentSession()
+          if (
+            currentSession &&
+            currentSession.status !== GameSessionStatus.Completed
+          ) {
+            set({ recoverableSession: currentSession, isLoading: false })
+            return true
+          }
+
           const recoverableSession = (await storage.loadSession()) ?? undefined
           set({ recoverableSession, isLoading: false })
           return recoverableSession !== undefined
@@ -253,6 +262,19 @@ export const createGameStore = ({
       resumeSession: async () => {
         set({ isLoading: true, error: null })
         try {
+          const currentSession = sessionEngine.getCurrentSession()
+          if (
+            currentSession &&
+            currentSession.status !== GameSessionStatus.Completed
+          ) {
+            set({
+              ...engineState(),
+              recoverableSession: undefined,
+              isLoading: false,
+            })
+            return true
+          }
+
           const session =
             get().recoverableSession ?? (await storage.loadSession())
           if (!session) {

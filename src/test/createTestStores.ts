@@ -1,5 +1,6 @@
 import { SessionEngine, TemplateEngine } from '@/engine'
 import type { GameSession, GameTemplate } from '@/models'
+import { GameSessionStatus } from '@/models'
 import type { SessionStorage, TemplateStorage } from '@/services'
 import { createGameStore, createTemplateStore } from '@/stores'
 
@@ -49,11 +50,25 @@ export const createSetupFlowStores = (
 ): SetupFlowStores => {
   const templateEngine = new TemplateEngine()
   templateEngine.loadTemplates()
+  const sessionEngine = new SessionEngine({ templateEngine })
   return {
     game: createGameStore({
-      sessionEngine: new SessionEngine({ templateEngine }),
+      sessionEngine,
       storage,
     }),
-    templates: createTemplateStore({ templateEngine, storage }),
+    templates: createTemplateStore({
+      templateEngine,
+      storage,
+      getActiveSession: async () => {
+        const currentSession = sessionEngine.getCurrentSession()
+        if (
+          currentSession &&
+          currentSession.status !== GameSessionStatus.Completed
+        ) {
+          return currentSession
+        }
+        return (await storage.loadSession()) ?? currentSession
+      },
+    }),
   }
 }
