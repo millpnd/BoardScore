@@ -77,6 +77,7 @@ export function PlayerSetupPage() {
         name: name.trim(),
       })),
       startedAt: new Date().toISOString(),
+      initialRoundId: createEntityId(),
     })
     if (started) navigate('/scoring')
   })
