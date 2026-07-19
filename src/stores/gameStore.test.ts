@@ -219,6 +219,19 @@ describe('game store', () => {
     expect(storage.session).toBeNull()
   })
 
+  it('treats the current active session as recoverable for Home navigation', async () => {
+    const { store } = await setupActiveStore()
+
+    expect(await store.getState().checkForRecoverableSession()).toBe(true)
+    expect(store.getState().recoverableSession?.id).toBe('session-1')
+    expect(await store.getState().resumeSession()).toBe(true)
+    expect(store.getState()).toMatchObject({
+      error: null,
+      isGameActive: true,
+      recoverableSession: undefined,
+    })
+  })
+
   it('returns false when no session exists to recover', async () => {
     const store = createGameStore({
       sessionEngine: new SessionEngine(),
