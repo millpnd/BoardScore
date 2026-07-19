@@ -28,6 +28,7 @@ import type {
   EndGameResult,
   NextRoundInput,
   PlayerScoreInput,
+  RestartSessionInput,
   SessionSnapshot,
 } from './types'
 
@@ -237,29 +238,42 @@ export class SessionEngine {
     return { session: this.commit(completed), winner }
   }
 
-  resetScores(newSessionId: EntityId): GameSession {
-    const session = this.requireSession()
-    if (session.status !== GameSessionStatus.Completed) {
+  resetScores(
+    newSessionId: EntityId,
+    playersInput?: readonly Player[],
+  ): GameSession {
+    const replay = this.createReplaySession(newSessionId, playersInput)
+    this.undoEngine.clearHistory()
+    return this.commit(replay)
+  }
+
+  restartGame(input: RestartSessionInput): GameSession {
+    const replay = this.createReplaySession(input.id, input.players)
+    if (!isNonEmpty(input.startedAt)) {
       throw new SessionEngineError(
         'INVALID_TRANSITION',
-        'Scores can be reset only after the game is completed.',
+        'Game start timestamp must be a non-empty string.',
       )
     }
-    if (!isNonEmpty(newSessionId) || newSessionId === session.id) {
+    if (!isNonEmpty(input.initialRoundId)) {
       throw new SessionEngineError(
-        'INVALID_TRANSITION',
-        'Play again requires a new non-empty session ID.',
+        'INVALID_ROUND',
+        'Initial round ID must be a non-empty string.',
       )
     }
 
     this.undoEngine.clearHistory()
     return this.commit({
-      id: newSessionId,
-      template: session.template,
-      players: session.players.map((player) => ({ ...player })),
-      rounds: [],
-      scoreEvents: [],
-      status: GameSessionStatus.NotStarted,
+      ...replay,
+      status: GameSessionStatus.Active,
+      startedAt: input.startedAt,
+      rounds: [
+        {
+          id: input.initialRoundId,
+          number: 1,
+          startedAt: input.startedAt,
+        },
+      ],
     })
   }
 
@@ -425,7 +439,11 @@ export class SessionEngine {
   }
 
   getCurrentStandings(): readonly WinnerStanding[] {
-    return this.evaluateWinner(this.requireSession()).standings
+    return this.getWinnerResult().standings
+  }
+
+  getWinnerResult(): WinnerResult {
+    return this.evaluateWinner(this.requireSession())
   }
 
   getCurrentRoundScores(): readonly PlayerTotal[] {
@@ -545,6 +563,79 @@ export class SessionEngine {
         'INVALID_PLAYER',
         'Player ID and name must be non-empty strings.',
       )
+    }
+  }
+
+  private createReplaySession(
+    newSessionId: EntityId,
+    playersInput?: readonly Player[],
+  ): GameSession {
+    const session = this.requireSession()
+    if (session.status !== GameSessionStatus.Completed) {
+      throw new SessionEngineError(
+        'INVALID_TRANSITION',
+        'Scores can be reset only after the game is completed.',
+      )
+    }
+    if (!isNonEmpty(newSessionId) || newSessionId === session.id) {
+      throw new SessionEngineError(
+        'INVALID_TRANSITION',
+        'Play again requires a new non-empty session ID.',
+      )
+    }
+    const players = playersInput ?? session.players
+    this.requireValidPlayerRoster(session.template, players)
+
+    return {
+      id: newSessionId,
+      template: session.template,
+      players: players.map((player) => ({ ...player })),
+      rounds: [],
+      scoreEvents: [],
+      status: GameSessionStatus.NotStarted,
+    }
+  }
+
+  private requireValidPlayerRoster(
+    template: GameTemplate,
+    players: readonly Player[],
+  ): void {
+    if (players.length < template.minimumPlayers) {
+      throw new SessionEngineError(
+        'PLAYER_LIMIT',
+        `At least ${template.minimumPlayers} players are required.`,
+      )
+    }
+    if (
+      template.maximumPlayers !== null &&
+      players.length > template.maximumPlayers
+    ) {
+      throw new SessionEngineError(
+        'PLAYER_LIMIT',
+        `Template allows at most ${template.maximumPlayers} players.`,
+      )
+    }
+
+    const playerIds = new Set<EntityId>()
+    const playerNames = new Set<string>()
+    for (const player of players) {
+      this.requireValidPlayer(player)
+      if (playerIds.has(player.id)) {
+        throw new SessionEngineError(
+          'DUPLICATE_PLAYER',
+          `Player "${player.id}" already exists.`,
+        )
+      }
+
+      const normalizedName = player.name.trim().toLocaleLowerCase()
+      if (playerNames.has(normalizedName)) {
+        throw new SessionEngineError(
+          'DUPLICATE_PLAYER_NAME',
+          `Player name "${player.name.trim()}" is already in use.`,
+        )
+      }
+      playerIds.add(player.id)
+      playerNames.add(normalizedName)
     }
   }
 

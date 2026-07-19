@@ -5,6 +5,7 @@ import type {
   CreateSessionInput,
   NextRoundInput,
   SessionEngine,
+  WinnerResult,
   WinnerStanding,
 } from '@/engine'
 import type { EntityId, GameSession, Player, Round, ScoreEvent } from '@/models'
@@ -25,6 +26,7 @@ export interface GameStoreState {
   readonly players: readonly Player[]
   readonly currentStandings: readonly WinnerStanding[]
   readonly currentWinner: WinnerStanding | undefined
+  readonly winnerResult: WinnerResult | undefined
   readonly playerTotals: readonly PlayerTotal[]
   readonly currentRoundScores: readonly PlayerTotal[]
   readonly isGameActive: boolean
@@ -43,6 +45,7 @@ export interface GameStoreState {
   startGame(startedAt: string): Promise<boolean>
   endGame(completedAt: string): Promise<boolean>
   resetScores(newSessionId: EntityId): Promise<boolean>
+  restartGame(input: RestartGameInput): Promise<boolean>
   nextRound(input: NextRoundInput): Promise<boolean>
   addScore(event: ScoreEvent, context: ActionContext): Promise<boolean>
   recordScore(input: RecordScoreInput): Promise<boolean>
@@ -74,6 +77,13 @@ export interface RecordScoreInput {
   readonly timestamp: string
 }
 
+export interface RestartGameInput {
+  readonly sessionId: EntityId
+  readonly players?: readonly Player[]
+  readonly startedAt: string
+  readonly initialRoundId: EntityId
+}
+
 type GameProjection = Pick<
   GameStoreState,
   | 'session'
@@ -82,6 +92,7 @@ type GameProjection = Pick<
   | 'players'
   | 'currentStandings'
   | 'currentWinner'
+  | 'winnerResult'
   | 'playerTotals'
   | 'currentRoundScores'
   | 'isGameActive'
@@ -96,6 +107,7 @@ const emptyState: GameProjection = {
   players: [],
   currentStandings: [],
   currentWinner: undefined,
+  winnerResult: undefined,
   playerTotals: [],
   currentRoundScores: [],
   isGameActive: false,
@@ -112,7 +124,8 @@ export const createGameStore = ({
       const session = sessionEngine.getCurrentSession()
       if (!session) return emptyState
 
-      const currentStandings = sessionEngine.getCurrentStandings()
+      const winnerResult = sessionEngine.getWinnerResult()
+      const currentStandings = winnerResult.standings
       return {
         session,
         recoverableSession: undefined,
@@ -120,6 +133,7 @@ export const createGameStore = ({
         players: session.players,
         currentStandings,
         currentWinner: sessionEngine.getWinner(),
+        winnerResult,
         playerTotals: currentStandings.map(
           ({ playerId, playerName, total }) => ({
             playerId,
@@ -161,6 +175,34 @@ export const createGameStore = ({
         })
         return false
       }
+    }
+
+    const executeLifecycleTransition = async (
+      operation: () => void,
+    ): Promise<boolean> => {
+      set({ isLoading: true, error: null })
+      try {
+        operation()
+      } catch (error) {
+        set({
+          ...engineState(),
+          isLoading: false,
+          error: getErrorMessage(error),
+        })
+        return false
+      }
+
+      try {
+        await persistCurrent()
+        set({ ...engineState(), isLoading: false })
+      } catch (error) {
+        set({
+          ...engineState(),
+          isLoading: false,
+          error: getErrorMessage(error),
+        })
+      }
+      return true
     }
 
     return {
@@ -258,12 +300,21 @@ export const createGameStore = ({
           sessionEngine.startGame(startedAt)
         }),
       endGame: (completedAt) =>
-        execute(() => {
+        executeLifecycleTransition(() => {
           sessionEngine.endGame(completedAt)
         }),
       resetScores: (newSessionId) =>
         execute(() => {
           sessionEngine.resetScores(newSessionId)
+        }),
+      restartGame: ({ sessionId, players, startedAt, initialRoundId }) =>
+        executeLifecycleTransition(() => {
+          sessionEngine.restartGame({
+            id: sessionId,
+            players,
+            startedAt,
+            initialRoundId,
+          })
         }),
       nextRound: (input) =>
         execute(() => {

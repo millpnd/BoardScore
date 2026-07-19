@@ -178,6 +178,41 @@ describe('ScoringPage', () => {
     expect(storage.session).not.toBeNull()
   })
 
+  it('confirms ending the game, clears persistence, and opens final results', async () => {
+    const user = userEvent.setup()
+    const { storage } = await renderScoring()
+    await selectPlayer(user, 'Mill')
+    await enterScore(user, '7')
+
+    const gameControls = screen.getByRole('navigation', {
+      name: 'Game controls',
+    })
+    await user.click(
+      within(gameControls).getByRole('button', { name: 'Finish game' }),
+    )
+    const dialog = await screen.findByRole('dialog', { name: 'Finish game?' })
+    expect(dialog).toHaveTextContent(
+      'Are you sure you want to finish this game?',
+    )
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('heading', { name: 'Scrabble' })).toBeVisible()
+
+    await user.click(
+      within(gameControls).getByRole('button', { name: 'Finish game' }),
+    )
+    await user.click(
+      within(
+        await screen.findByRole('dialog', { name: 'Finish game?' }),
+      ).getByRole('button', { name: 'Finish game' }),
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Game complete' }),
+    ).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Mill' })).toBeVisible()
+    expect(storage.session).toBeNull()
+  })
+
   it('shows persistence errors without crashing score entry', async () => {
     const user = userEvent.setup()
     const storage = new SetupFlowMemoryStorage()

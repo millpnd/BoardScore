@@ -19,6 +19,7 @@ import {
   PrimaryButton,
   SecondaryButton,
 } from '@/components'
+import { GameSessionStatus } from '@/models'
 import { createEntityId } from '@/utils/createEntityId'
 
 interface PlayerSetupForm {
@@ -30,19 +31,27 @@ const newPlayer = () => ({ playerId: createEntityId(), name: '' })
 export function PlayerSetupPage() {
   const navigate = useNavigate()
   const activeTemplate = useTemplateStore((state) => state.activeTemplate)
+  const session = useGameStore((state) => state.session)
   const setupGame = useGameStore((state) => state.setupGame)
+  const restartGame = useGameStore((state) => state.restartGame)
   const isLoading = useGameStore((state) => state.isLoading)
   const error = useGameStore((state) => state.error)
+  const editingCompletedGame = session?.status === GameSessionStatus.Completed
+  const template = editingCompletedGame ? session.template : activeTemplate
   const { control, formState, handleSubmit, register } =
     useForm<PlayerSetupForm>({
-      defaultValues: { players: [newPlayer(), newPlayer()] },
+      defaultValues: {
+        players: editingCompletedGame
+          ? session.players.map(({ id, name }) => ({ playerId: id, name }))
+          : [newPlayer(), newPlayer()],
+      },
     })
   const { append, fields, remove } = useFieldArray({
     control,
     name: 'players',
   })
 
-  if (!activeTemplate) {
+  if (!template) {
     return (
       <AppLayout
         header={
@@ -69,16 +78,25 @@ export function PlayerSetupPage() {
   }
 
   const submit = handleSubmit(async ({ players }) => {
-    const started = await setupGame({
-      sessionId: createEntityId(),
-      templateId: activeTemplate.id,
-      players: players.map(({ playerId, name }) => ({
-        id: playerId,
-        name: name.trim(),
-      })),
-      startedAt: new Date().toISOString(),
-      initialRoundId: createEntityId(),
-    })
+    const timestamp = new Date().toISOString()
+    const roster = players.map(({ playerId, name }) => ({
+      id: playerId,
+      name: name.trim(),
+    }))
+    const started = editingCompletedGame
+      ? await restartGame({
+          sessionId: createEntityId(),
+          players: roster,
+          startedAt: timestamp,
+          initialRoundId: createEntityId(),
+        })
+      : await setupGame({
+          sessionId: createEntityId(),
+          templateId: template.id,
+          players: roster,
+          startedAt: timestamp,
+          initialRoundId: createEntityId(),
+        })
     if (started) navigate('/scoring')
   })
 
@@ -98,15 +116,21 @@ export function PlayerSetupPage() {
             loading={isLoading}
             type="submit"
           >
-            Start game
+            {editingCompletedGame ? 'Start new game' : 'Start game'}
           </PrimaryButton>
         </BottomActionBar>
       }
       header={
         <Header
-          leading={<BackButton onClick={() => navigate('/games')} />}
-          subtitle={activeTemplate.name}
-          title="Add players"
+          leading={
+            <BackButton
+              onClick={() =>
+                navigate(editingCompletedGame ? '/winner' : '/games')
+              }
+            />
+          }
+          subtitle={template.name}
+          title={editingCompletedGame ? 'Edit players' : 'Add players'}
         />
       }
     >
@@ -120,8 +144,8 @@ export function PlayerSetupPage() {
           <Stack gap={4}>
             <Title order={2}>Who is playing?</Title>
             <Text c="dimmed">
-              Add at least {activeTemplate.minimumPlayers} players. Names must
-              be unique.
+              Add at least {template.minimumPlayers} players. Names must be
+              unique.
             </Text>
           </Stack>
 

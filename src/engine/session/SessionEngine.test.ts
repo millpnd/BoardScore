@@ -146,6 +146,87 @@ describe('SessionEngine lifecycle', () => {
     expect(replay.completedAt).toBeUndefined()
   })
 
+  it('resets with a validated edited player roster', () => {
+    const engine = startGame()
+    engine.addScore(score('one', 'mill', 10), action('add-one'))
+    engine.endGame('2026-01-01T01:00:00.000Z')
+
+    const replay = engine.resetScores('session-2', [
+      { id: 'john', name: 'Johnny' },
+      { id: 'jane', name: 'Jane' },
+      { id: 'mill', name: 'Mill' },
+    ])
+
+    expect(replay.players).toEqual([
+      { id: 'john', name: 'Johnny' },
+      { id: 'jane', name: 'Jane' },
+      { id: 'mill', name: 'Mill' },
+    ])
+    expect(replay.scoreEvents).toEqual([])
+    expect(replay.rounds).toEqual([])
+  })
+
+  it('keeps completed results when an edited replay roster is invalid', () => {
+    const engine = startGame()
+    engine.addScore(score('one', 'mill', 10), action('add-one'))
+    engine.endGame('2026-01-01T01:00:00.000Z')
+
+    expectCode('DUPLICATE_PLAYER_NAME', () =>
+      engine.resetScores('session-2', [
+        { id: 'mill', name: 'Mill' },
+        { id: 'john', name: 'mill' },
+      ]),
+    )
+    expect(engine.getCurrentSession()).toMatchObject({
+      id: 'session-1',
+      status: GameSessionStatus.Completed,
+      scoreEvents: [{ points: 10 }],
+    })
+  })
+
+  it('restarts atomically with edited players and an initial round', () => {
+    const engine = startGame()
+    engine.addScore(score('one', 'mill', 10), action('add-one'))
+    engine.endGame('2026-01-01T01:00:00.000Z')
+
+    const replay = engine.restartGame({
+      id: 'session-2',
+      players: [
+        { id: 'mill', name: 'Mila' },
+        { id: 'jane', name: 'Jane' },
+      ],
+      startedAt: '2026-01-02T00:00:00.000Z',
+      initialRoundId: 'round-1',
+    })
+
+    expect(replay).toMatchObject({
+      id: 'session-2',
+      status: GameSessionStatus.Active,
+      players: [{ name: 'Mila' }, { name: 'Jane' }],
+      scoreEvents: [],
+      rounds: [{ id: 'round-1', number: 1 }],
+    })
+  })
+
+  it('keeps completed results when restart inputs are invalid', () => {
+    const engine = startGame()
+    engine.addScore(score('one', 'mill', 10), action('add-one'))
+    engine.endGame('2026-01-01T01:00:00.000Z')
+
+    expectCode('INVALID_ROUND', () =>
+      engine.restartGame({
+        id: 'session-2',
+        startedAt: '2026-01-02T00:00:00.000Z',
+        initialRoundId: '',
+      }),
+    )
+    expect(engine.getCurrentSession()).toMatchObject({
+      id: 'session-1',
+      status: GameSessionStatus.Completed,
+      scoreEvents: [{ points: 10 }],
+    })
+  })
+
   it('returns current session and snapshot as defensive copies', () => {
     const engine = createWithPlayers(createEngine())
     const returned = engine.getCurrentSession() as unknown as {

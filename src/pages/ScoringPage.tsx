@@ -1,7 +1,7 @@
 import { Alert, Badge, Grid, Group, Stack, Text, Title } from '@mantine/core'
 import {
   AlertCircle,
-  Ellipsis,
+  Flag,
   RotateCcw,
   StepForward,
   UserRound,
@@ -17,7 +17,6 @@ import {
   ConfirmDialog,
   EmptyState,
   Header,
-  IconButton,
   NumericKeypad,
   PageContainer,
   PrimaryButton,
@@ -34,6 +33,7 @@ export function ScoringPage() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>()
   const [scoreInput, setScoreInput] = useState('')
   const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false)
+  const [finishConfirmationOpen, setFinishConfirmationOpen] = useState(false)
   const session = useGameStore((state) => state.session)
   const currentRound = useGameStore((state) => state.currentRound)
   const standings = useGameStore((state) => state.currentStandings)
@@ -44,6 +44,7 @@ export function ScoringPage() {
   const recordScore = useGameStore((state) => state.recordScore)
   const nextRound = useGameStore((state) => state.nextRound)
   const undoLastAction = useGameStore((state) => state.undoLastAction)
+  const endGame = useGameStore((state) => state.endGame)
 
   useEffect(() => {
     const confirmRefresh = (event: BeforeUnloadEvent) => {
@@ -101,15 +102,16 @@ export function ScoringPage() {
     setScoreInput('')
   }
 
+  const finishGame = async () => {
+    const finished = await endGame(new Date().toISOString())
+    setFinishConfirmationOpen(false)
+    if (finished) navigate('/winner')
+  }
+
   return (
     <AppLayout
       header={
         <Header
-          actions={
-            <IconButton disabled label="More options">
-              <Ellipsis aria-hidden size={22} />
-            </IconButton>
-          }
           leading={
             <BackButton
               label="Leave game"
@@ -149,6 +151,13 @@ export function ScoringPage() {
               >
                 Next round
               </PrimaryButton>
+              <SecondaryButton
+                disabled={isLoading}
+                leftSection={<Flag aria-hidden size={20} />}
+                onClick={() => setFinishConfirmationOpen(true)}
+              >
+                Finish game
+              </SecondaryButton>
             </Toolbar>
           </Group>
 
@@ -234,6 +243,14 @@ export function ScoringPage() {
         onConfirm={() => navigate('/')}
         opened={leaveConfirmationOpen}
         title="Leave game?"
+      />
+      <ConfirmDialog
+        confirmLabel="Finish game"
+        message="Are you sure you want to finish this game?"
+        onCancel={() => setFinishConfirmationOpen(false)}
+        onConfirm={() => void finishGame()}
+        opened={finishConfirmationOpen}
+        title="Finish game?"
       />
     </AppLayout>
   )

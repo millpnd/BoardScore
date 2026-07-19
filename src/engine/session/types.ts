@@ -1,4 +1,10 @@
-import type { EntityId, GameSession, IsoDateTime, Round } from '../../models'
+import type {
+  EntityId,
+  GameSession,
+  IsoDateTime,
+  Player,
+  Round,
+} from '../../models'
 import type { UndoMetadata } from '../undo'
 import type { WinnerResult } from '../winner'
 
@@ -23,6 +29,13 @@ export interface PlayerScoreInput {
   readonly playerId: EntityId
   readonly points: number
   readonly createdAt: IsoDateTime
+}
+
+export interface RestartSessionInput {
+  readonly id: EntityId
+  readonly players?: readonly Player[]
+  readonly startedAt: IsoDateTime
+  readonly initialRoundId: EntityId
 }
 
 export interface EndGameResult {

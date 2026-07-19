@@ -10,6 +10,7 @@ export {
   type GameStoreState,
   type PlayerTotal,
   type RecordScoreInput,
+  type RestartGameInput,
   type SetupGameInput,
 } from './gameStore'
 export {
