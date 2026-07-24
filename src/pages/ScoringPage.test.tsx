@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { AppRoutes } from '@/app/App'
 import { StoreProvider } from '@/app/StoreProvider'
@@ -67,7 +67,6 @@ const enterScore = async (
 
 describe('ScoringPage', () => {
   it('renders active session information and selects one player', async () => {
-    const user = userEvent.setup()
     await renderScoring()
 
     expect(screen.getByRole('heading', { name: 'Scrabble' })).toBeVisible()
@@ -75,21 +74,46 @@ describe('ScoringPage', () => {
     expect(screen.getByLabelText('Round 1')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()
 
-    const mill = await selectPlayer(user, 'Mill')
+    const mill = screen.getByRole('button', { name: /Mill/ })
     expect(mill).toHaveAttribute('aria-pressed', 'true')
     expect(
       screen.getByRole('group', { name: 'Score for Mill numeric keypad' }),
     ).toBeVisible()
+    await waitFor(() =>
+      expect(
+        screen.getByRole('textbox', { name: 'Score for Mill' }),
+      ).toHaveFocus(),
+    )
     expect(screen.getByRole('button', { name: /John/ })).toHaveAttribute(
       'aria-pressed',
       'false',
     )
   })
 
+  it('clears the score and advances focus to the next player after submit', async () => {
+    const user = userEvent.setup()
+    await renderScoring()
+
+    await enterScore(user, '12')
+
+    expect(screen.getByRole('button', { name: /Mill/ })).toHaveTextContent('12')
+    expect(screen.getByRole('button', { name: /Mill/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    expect(screen.getByRole('button', { name: /John/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    const input = screen.getByRole('textbox', { name: 'Score for John' })
+    expect(input).toHaveValue('')
+    await waitFor(() => expect(input).toHaveFocus())
+  })
+
   it('records running-total scores, persists, updates standings, and undoes', async () => {
     const user = userEvent.setup()
     const { storage } = await renderScoring()
-    const mill = await selectPlayer(user, 'Mill')
+    const mill = screen.getByRole('button', { name: /Mill/ })
 
     await enterScore(user, '12')
 
@@ -107,7 +131,83 @@ describe('ScoringPage', () => {
 
     expect(mill).toHaveTextContent('0')
     expect(storage.session?.scoreEvents).toEqual([])
+    expect(mill).toHaveAttribute('aria-pressed', 'true')
+    await waitFor(() =>
+      expect(
+        screen.getByRole('textbox', { name: 'Score for Mill' }),
+      ).toHaveFocus(),
+    )
     expect(undo).toBeDisabled()
+  })
+
+  it('starts the next round after the final player score without duplicate rounds', async () => {
+    const user = userEvent.setup()
+    const { storage } = await renderScoring()
+
+    await enterScore(user, '12')
+    await enterScore(user, '5')
+
+    expect(await screen.findByText(/Round 2\s*·\s*2 players/)).toBeVisible()
+    expect(storage.session?.scoreEvents).toHaveLength(2)
+    expect(storage.session?.rounds).toHaveLength(2)
+    expect(storage.session?.rounds[1]?.number).toBe(2)
+    expect(screen.getByRole('button', { name: /Mill/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await waitFor(() =>
+      expect(
+        screen.getByRole('textbox', { name: 'Score for Mill' }),
+      ).toHaveFocus(),
+    )
+  })
+
+  it('undoes a final-player submit back to that player in the previous round', async () => {
+    const user = userEvent.setup()
+    const { storage } = await renderScoring()
+
+    await enterScore(user, '12')
+    await enterScore(user, '5')
+    await screen.findByText(/Round 2\s*·\s*2 players/)
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
+
+    expect(await screen.findByText(/Round 1\s*·\s*2 players/)).toBeVisible()
+    expect(storage.session?.scoreEvents).toHaveLength(1)
+    expect(storage.session?.scoreEvents[0]).toMatchObject({
+      playerId: 'mill',
+      points: 12,
+    })
+    expect(screen.getByRole('button', { name: /John/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  it('prevents duplicate submissions from rapid Done clicks', async () => {
+    const user = userEvent.setup()
+    const storage = new SetupFlowMemoryStorage()
+    const saveSession = vi.spyOn(storage, 'saveSession').mockImplementation(
+      (session) =>
+        new Promise((resolve) => {
+          window.setTimeout(() => {
+            storage.session = session
+            resolve()
+          }, 20)
+        }),
+    )
+    await renderScoring(runningTemplateId, players, storage)
+
+    await user.click(screen.getByRole('button', { name: '9' }))
+    const done = screen.getByRole('button', { name: 'Done' })
+    await Promise.all([user.click(done), user.click(done)])
+
+    await waitFor(() => expect(storage.session?.scoreEvents).toHaveLength(1))
+    expect(storage.session?.scoreEvents[0]).toMatchObject({
+      playerId: 'mill',
+      points: 9,
+    })
+    expect(saveSession).toHaveBeenCalled()
   })
 
   it('advances rounds through SessionEngine and persists the session', async () => {

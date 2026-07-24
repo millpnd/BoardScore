@@ -22,6 +22,7 @@ export interface ActionContext {
 export interface NextRoundInput {
   readonly id: EntityId
   readonly startedAt: IsoDateTime
+  readonly metadata?: UndoMetadata
 }
 
 export interface PlayerScoreInput {

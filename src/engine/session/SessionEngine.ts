@@ -54,6 +54,10 @@ const cloneSession = (session: GameSession): GameSession => ({
 
 const isNonEmpty = (value: string): boolean => value.trim().length > 0
 
+const isAutomaticScoreEntryAdvance = (action: UndoAction): boolean =>
+  action.type === UndoActionType.AdvanceRound &&
+  action.metadata?.automaticScoreEntryAdvance === true
+
 export class SessionEngine {
   private currentSession: GameSession | undefined
   private readonly templateEngine: TemplateEngine
@@ -326,6 +330,7 @@ export class SessionEngine {
         id: `advance-round-${input.id}`,
         sessionId: session.id,
         timestamp: input.startedAt,
+        metadata: input.metadata,
         type: UndoActionType.AdvanceRound,
         previousRounds,
         currentRounds: updated.rounds,
@@ -434,6 +439,17 @@ export class SessionEngine {
     try {
       const result = this.undoEngine.undo(session)
       this.currentSession = cloneSession(result.session)
+      if (
+        isAutomaticScoreEntryAdvance(result.action) &&
+        this.undoEngine.canUndo()
+      ) {
+        const scoreResult = this.undoEngine.undo(this.currentSession)
+        this.currentSession = cloneSession(scoreResult.session)
+        return {
+          ...scoreResult,
+          session: cloneSession(scoreResult.session),
+        }
+      }
       return {
         ...result,
         session: cloneSession(result.session),
