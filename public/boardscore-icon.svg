@@ -1,0 +1,14 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 512 512"
+  role="img"
+  aria-label="BoardScore"
+>
+  <rect width="512" height="512" rx="96" fill="#3268e4" />
+  <rect x="96" y="112" width="320" height="288" rx="40" fill="#f8f9fa" />
+  <path
+    fill="#3268e4"
+    d="M144 184h224v32H144zm0 80h144v32H144zm0 80h192v32H144z"
+  />
+  <circle cx="352" cy="280" r="32" fill="#2f9e44" />
+</svg>
