@@ -1,0 +1,10 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 64 64"
+  role="img"
+  aria-label="BoardScore"
+>
+  <rect width="64" height="64" rx="12" fill="#3268e4" />
+  <path fill="#f8f9fa" d="M16 16h32v32H16z" />
+  <path fill="#3268e4" d="M22 23h20v4H22zm0 8h14v4H22zm0 8h18v4H22z" />
+</svg>
