@@ -2,6 +2,7 @@ import type {
   EntityId,
   GameSession,
   IsoDateTime,
+  Round,
   ScoreEvent,
 } from '../../models'
 import type { ScoreCalculation } from '../score'
@@ -10,6 +11,7 @@ export enum UndoActionType {
   AddScoreEvent = 'add-score-event',
   UpdateScoreEvent = 'update-score-event',
   DeleteScoreEvent = 'delete-score-event',
+  AdvanceRound = 'advance-round',
 }
 
 export type UndoMetadata = Readonly<
@@ -43,8 +45,17 @@ export interface DeleteScoreEventAction extends UndoActionBase {
   readonly eventIndex: number
 }
 
+export interface AdvanceRoundAction extends UndoActionBase {
+  readonly type: UndoActionType.AdvanceRound
+  readonly previousRounds: readonly Round[]
+  readonly currentRounds: readonly Round[]
+}
+
 export type UndoAction =
-  AddScoreEventAction | UpdateScoreEventAction | DeleteScoreEventAction
+  | AddScoreEventAction
+  | UpdateScoreEventAction
+  | DeleteScoreEventAction
+  | AdvanceRoundAction
 
 export interface UndoResult {
   readonly session: GameSession

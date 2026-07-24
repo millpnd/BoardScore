@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { GameSession, GameTemplate, ScoreEvent } from '../../models'
+import type { GameSession, GameTemplate, Round, ScoreEvent } from '../../models'
 import {
   GameSessionStatus,
   RoundType,
@@ -13,6 +13,7 @@ import { UndoEngine } from './UndoEngine'
 import { UndoEngineError, type UndoEngineErrorCode } from './UndoEngineError'
 import {
   UndoActionType,
+  type AdvanceRoundAction,
   type AddScoreEventAction,
   type DeleteScoreEventAction,
   type UndoAction,
@@ -55,6 +56,16 @@ const event = (id: string, playerId: string, points: number): ScoreEvent => ({
   createdAt: '2026-01-01T00:00:00.000Z',
 })
 
+const round = (
+  id: string,
+  number: number,
+  startedAt = '2026-01-01T00:00:00.000Z',
+): Round => ({
+  id,
+  number,
+  startedAt,
+})
+
 const addAction = (
   currentEvent: ScoreEvent,
   id = `add-${currentEvent.id}`,
@@ -92,6 +103,19 @@ const deleteAction = (
   previousEvent,
   currentEvent: null,
   eventIndex,
+})
+
+const advanceRoundAction = (
+  previousRounds: readonly Round[],
+  currentRounds: readonly Round[],
+  id = 'advance-round',
+): AdvanceRoundAction => ({
+  id,
+  sessionId: 'session-1',
+  type: UndoActionType.AdvanceRound,
+  timestamp: '2026-01-01T00:10:00.000Z',
+  previousRounds,
+  currentRounds,
 })
 
 const expectCode = (
@@ -248,6 +272,27 @@ describe('UndoEngine restoration', () => {
     expect(restoredOriginal).toEqual(original)
   })
 
+  it('undoes a round advance and restores the previous round state', () => {
+    const scoreEngine = new ScoreEngine()
+    const undoEngine = new UndoEngine(scoreEngine)
+    const previousRounds = [round('round-1', 1)]
+    const currentRounds = [
+      { ...previousRounds[0]!, completedAt: '2026-01-01T00:10:00.000Z' },
+      round('round-2', 2, '2026-01-01T00:10:00.000Z'),
+    ]
+    const active = session({ rounds: currentRounds })
+    undoEngine.recordAction(
+      active,
+      advanceRoundAction(previousRounds, currentRounds),
+    )
+
+    const result = undoEngine.undo(active)
+
+    expect(result.session.rounds).toEqual(previousRounds)
+    expect(result.calculation.roundSummaries).toHaveLength(1)
+    expect(undoEngine.canUndo()).toBe(false)
+  })
+
   it('does not mutate sessions or caller-owned actions', () => {
     const scoreEngine = new ScoreEngine()
     const undoEngine = new UndoEngine(scoreEngine)
@@ -291,6 +336,7 @@ describe('UndoEngine validation', () => {
       } as unknown as UndoAction,
       updateAction(event('one', 'mill', 10), event('one', 'mill', 10)),
       deleteAction(event('one', 'mill', 10), -1),
+      advanceRoundAction([], []),
       {
         ...addAction(event('one', 'mill', 10)),
         metadata: { nested: {} },

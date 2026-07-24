@@ -2,6 +2,7 @@ export { UndoEngine } from './UndoEngine'
 export { UndoEngineError, type UndoEngineErrorCode } from './UndoEngineError'
 export {
   UndoActionType,
+  type AdvanceRoundAction,
   type AddScoreEventAction,
   type DeleteScoreEventAction,
   type UndoAction,
