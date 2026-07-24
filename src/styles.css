@@ -239,9 +239,8 @@ body {
   white-space: nowrap;
 }
 
-.keypad-input::placeholder {
+.keypad-display[data-empty] {
   color: var(--mantine-color-dimmed);
-  opacity: 1;
 }
 
 .mantine-Input-input {

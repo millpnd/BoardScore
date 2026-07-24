@@ -28,27 +28,24 @@ describe('NumericKeypad', () => {
 
     await user.click(screen.getByRole('button', { name: '1' }))
     await user.click(screen.getByRole('button', { name: '0' }))
-    expect(screen.getByRole('textbox', { name: 'Points' })).toHaveValue('10')
+    expect(screen.getByRole('status')).toHaveTextContent('10')
 
     await user.click(screen.getByRole('button', { name: 'Toggle negative' }))
-    expect(screen.getByRole('textbox', { name: 'Points' })).toHaveValue('-10')
+    expect(screen.getByRole('status')).toHaveTextContent('-10')
     await user.click(screen.getByRole('button', { name: 'Backspace' }))
-    expect(screen.getByRole('textbox', { name: 'Points' })).toHaveValue('-1')
+    expect(screen.getByRole('status')).toHaveTextContent('-1')
     await user.click(screen.getByRole('button', { name: 'Clear' }))
-    expect(screen.getByRole('textbox', { name: 'Points' })).toHaveValue('')
+    expect(screen.getByRole('status')).toHaveTextContent('0')
   })
 
-  it('supports physical keyboard entry and submit', async () => {
+  it('does not render a native textbox for score changes', async () => {
     const onSubmit = vi.fn()
-    const user = userEvent.setup()
     renderWithTheme(<KeypadHarness onSubmit={onSubmit} />)
-    const input = screen.getByRole('textbox', { name: 'Points' })
-    input.focus()
 
-    await user.keyboard('42{Backspace}7{Enter}')
-
-    expect(input).toHaveValue('47')
-    expect(onSubmit).toHaveBeenCalledOnce()
+    expect(
+      screen.queryByRole('textbox', { name: 'Points' }),
+    ).not.toBeInTheDocument()
+    expect(onSubmit).not.toHaveBeenCalled()
   })
 
   it('replaces leading zero and respects disabled and negative settings', async () => {
