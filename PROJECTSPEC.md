@@ -2,23 +2,23 @@
 
 # BoardScore
 
-Version: 1.0 (MVP)
+Version: 1.1 (MVP)
 
 ---
 
 # Product Vision
 
-BoardScore is a lightweight web application that replaces paper and spreadsheet score sheets for board games.
+BoardScore is an offline-first browser-based scoring application that replaces paper score sheets and spreadsheets for tabletop games.
 
-Rather than building a separate scorer for every game, BoardScore provides a configurable scoring engine powered by reusable game templates.
+Rather than building a dedicated scorer for every game, BoardScore uses a reusable scoring engine powered by configurable game templates.
 
-The application should be simple enough that players spend their time playing the board game—not learning the scoring application.
+The application is designed for a single shared phone or tablet placed in the center of the table, allowing players to focus on the game instead of scorekeeping.
 
 ---
 
 # Mission
 
-Replace paper scoring with a fast, intuitive, and reliable digital scoring experience.
+Provide the fastest, simplest, and most reliable way to keep score for tabletop games without requiring accounts, internet connectivity during play, or separate apps for every game.
 
 ---
 
@@ -26,10 +26,11 @@ Replace paper scoring with a fast, intuitive, and reliable digital scoring exper
 
 The MVP is successful when:
 
-* Players no longer need paper or spreadsheets to score supported games.
-* A new user can start scoring within 30 seconds.
-* An active game is never lost because of an accidental refresh or browser close.
-* The application supports at least 10 popular board games through reusable templates.
+* Players no longer need paper or spreadsheets.
+* A new game can start within 30 seconds.
+* Active games automatically recover after normal refreshes or browser restarts.
+* Gameplay continues without internet after the application has been loaded.
+* At least 10 popular board games are supported through reusable templates.
 
 ---
 
@@ -39,6 +40,7 @@ The MVP is successful when:
 * Friends
 * Casual board gamers
 * Hobby board gamers
+* Board game meetups
 * Board game cafés (future)
 
 ---
@@ -47,15 +49,15 @@ The MVP is successful when:
 
 ## Fast
 
-Entering scores should always be faster than writing on paper.
+Entering scores must always be faster than writing on paper.
 
 ## Simple
 
-Avoid unnecessary configuration during gameplay.
+Avoid unnecessary setup during gameplay.
 
 ## Reliable
 
-No active game should ever be lost.
+Recover active games automatically.
 
 ## Reversible
 
@@ -63,7 +65,31 @@ Every scoring action must be undoable.
 
 ## Configurable
 
-Games should be defined through templates instead of hardcoded logic.
+Games are defined through templates rather than hardcoded logic.
+
+---
+
+# Offline-First
+
+BoardScore is an offline-first Progressive Web App.
+
+After the application has been loaded successfully at least once:
+
+* scoring works without an internet connection;
+* built-in templates remain available;
+* the application shell is cached locally;
+* active games remain playable;
+* custom templates remain available;
+* player lists remain available;
+* user preferences remain available.
+
+Internet access is required only for:
+
+* the initial application download;
+* application updates;
+* future online features.
+
+Offline support does not include synchronization across browsers or devices.
 
 ---
 
@@ -73,7 +99,7 @@ Games should be defined through templates instead of hardcoded logic.
 
 ### Built-in Game Templates
 
-The MVP should include templates for games such as:
+The MVP includes templates for:
 
 * Scrabble
 * Qwirkle
@@ -88,29 +114,28 @@ The MVP should include templates for games such as:
 
 ### Player Management
 
-* Minimum of 2 players
+* Minimum 2 players
 * Unlimited players
 * Add players
-* Edit player names
+* Edit players
 * Remove players
-* Reuse players for another game
+* Reuse previous players
 
-### Scoring Modes
+### Scoring
 
 Support:
 
 * Running Total
 * Per Round
 
-### Winner Calculation
+### Winner Rules
 
-Automatically determine the winner.
-
-Initial winner rule:
+Support:
 
 * Highest Score Wins
+* Lowest Score Wins
 
-The architecture should support additional winner rules in the future.
+The architecture must allow additional winner rules without modifying engine logic.
 
 ### Undo
 
@@ -118,31 +143,33 @@ Undo the latest scoring action.
 
 ### Session Recovery
 
-Automatically save the current game after every meaningful change.
+Automatically save the active game after every meaningful change.
 
-If an unfinished game exists when the application starts, prompt the user to:
+When the application starts:
 
-* Resume Previous Game
-* Discard Previous Game
+* Resume previous game
+* Discard previous game
+
+Recovery is guaranteed for normal refreshes, browser restarts, and temporary connectivity loss.
+
+Recovery does not guarantee persistence after browser storage has been manually cleared.
 
 ### Reset
 
-After a game:
+After a completed game:
 
 * Reset scores
-* Keep existing players
+* Keep players
 * Edit players
 * Start another game
 
 ### Custom Templates
 
-Allow users to create and manage custom game templates stored locally.
+Users can create and manage custom templates stored locally.
 
 ---
 
 # Out of Scope (MVP)
-
-The following are intentionally excluded:
 
 * User accounts
 * Cloud synchronization
@@ -203,13 +230,15 @@ Storage
 
 Hosting
 
+Primary:
+
 * Vercel
 
-Alternative Hosting
+Alternative:
 
 * GitHub Pages
 
-Target Monthly Cost
+Target Monthly Cost:
 
 * $0
 
@@ -217,9 +246,9 @@ Target Monthly Cost
 
 # Architecture
 
-The application should follow a layered architecture.
+The application follows a layered architecture:
 
-Presentation Layer
+Presentation
 
 ↓
 
@@ -233,13 +262,13 @@ Business Engines
 
 Storage
 
-Business logic must remain independent from React and storage.
+Business logic must remain independent of React and storage implementations.
 
 ---
 
 # Business Engines
 
-The application should contain the following business engines:
+The application consists of:
 
 * TemplateEngine
 * ScoreEngine
@@ -247,13 +276,17 @@ The application should contain the following business engines:
 * UndoEngine
 * SessionEngine
 
-Each engine should be independently testable.
+Each engine must:
+
+* be framework independent;
+* be implemented in pure TypeScript;
+* be independently testable.
 
 ---
 
 # Domain Models
 
-Core models include:
+Core models:
 
 * GameTemplate
 * GameSession
@@ -261,42 +294,49 @@ Core models include:
 * Round
 * ScoreEvent
 
-Scores are represented as immutable ScoreEvents.
+## ScoreEvent
 
-Totals are calculated by the ScoreEngine.
+Every scoring action is stored as an immutable ScoreEvent.
+
+Totals are always calculated by ScoreEngine.
 
 Totals must never be stored directly.
 
-# GameTemplate
--------------
-id: string
-name: string
-description: string
-icon: string
-minimumPlayers: number
-maximumPlayers: number | null
-scoringType: RunningTotal | PerRound
-winnerRule: HighestScore | LowestScore
-roundConfiguration:
-  type: Unlimited | Fixed
-  totalRounds?: number
-theme?: string
-isBuiltIn: boolean
-version: number
+## GameTemplate
+
+Fields include:
+
+* id
+* name
+* description
+* icon
+* minimumPlayers
+* maximumPlayers
+* scoringType
+* winnerRule
+* roundConfiguration
+* theme
+* isBuiltIn
+* version
 
 ---
 
 # Storage Strategy
 
-Built-in templates are stored as JSON files.
+The MVP is completely client-side.
 
-Custom templates are stored in Local Storage.
+Built-in templates are bundled with the application.
 
-The active game session is automatically persisted in Local Storage.
+Store locally:
 
-Completed games are discarded.
+* active game session;
+* reusable player list;
+* custom templates;
+* user preferences.
 
-Storage should be abstracted so Local Storage can later be replaced by an API.
+Completed games are discarded after reset.
+
+Business logic depends only on a storage abstraction so Local Storage can later be replaced by IndexedDB or a REST API without changing engine logic.
 
 ---
 
@@ -332,78 +372,99 @@ Return Home
 
 # UI Guidelines
 
-The application is designed primarily for a phone or tablet placed in the center of a table.
+Designed primarily for a shared phone or tablet.
 
-The interface should emphasize:
+Prioritize:
 
-* Large touch targets
-* Large typography
-* Minimal typing
-* Fast score entry
-* Responsive layouts
-* High contrast
+* large touch targets;
+* large typography;
+* minimal typing;
+* minimal dialogs;
+* fast score entry;
+* responsive layouts;
+* high contrast.
+
+---
+
+# Non-Functional Requirements
+
+BoardScore should:
+
+* load within two seconds on a modern mobile connection;
+* respond instantly to score updates;
+* minimize unnecessary React re-renders;
+* work well on common phone and tablet sizes;
+* avoid requiring a keyboard during normal gameplay;
+* function entirely without a backend.
 
 ---
 
 # Development Roadmap
 
-Phase 1
+## Phase 1
 
-* Project setup
+Project setup
 
-Phase 2
+## Phase 2
 
-* Domain models
+Domain models
 
-Phase 3
+## Phase 3
 
-* Business engines
+Business engines
 
-Phase 4
+## Phase 4
 
-* State management
+State management
 
-Phase 5
+## Phase 5
 
-* Local Storage
+Storage
 
-Phase 6
+## Phase 6
 
-* UI implementation
+UI
 
-Phase 7
+## Phase 7
 
-* Built-in templates
+Built-in templates
 
-Phase 8
+## Phase 8
 
-* Custom templates
+Custom templates
 
-Phase 9
+## Phase 9
 
-* Testing
+Testing
 
-Phase 10
+## Phase 10
 
-* Polish and PWA improvements
+Polish and PWA improvements
 
 ---
 
-# Future Roadmap
+# Future Enhancements
 
-Version 2
+## Cloud Features
 
 * User accounts
 * Cloud synchronization
-* Statistics
 * Match history
+
+## Community
+
 * Shared templates
-
-Version 3
-
-* Multiplayer devices
 * Community templates
+
+## Analytics
+
+* Statistics
+* Game history
+
+## Competitive Play
+
 * Tournament mode
+* Multiplayer across devices
 * Multiple score categories
 
 ---
@@ -421,4 +482,6 @@ The MVP is complete when users can:
 7. Recover an unfinished game.
 8. Reset scores while keeping players.
 9. Create custom templates.
-10. Deploy the application to Vercel or GitHub Pages without a backend.
+10. Continue scoring without internet after the application has been loaded.
+11. Install the application as a Progressive Web App.
+12. Deploy to Vercel or GitHub Pages without requiring a backend.

@@ -1,350 +1,65 @@
-# AGENTS.md
-
 # BoardScore Engineering Guidelines
 
-## Role
+This repository follows the Global Codex Cost and Context Policy. This file defines only BoardScore-specific execution rules. Product requirements and architecture live in `PROJECTSPEC.md`.
 
-You are a senior software engineer responsible for implementing and maintaining BoardScore.
+## Before Each Task
 
-Your goal is to produce clean, maintainable, production-quality software that follows the project's architecture and engineering principles.
+1. Identify the requested milestone or issue.
+2. Read only the relevant sections of `PROJECTSPEC.md`.
+3. Inspect the smallest affected code path.
+4. Explain any conflict with the specification before changing code.
 
-Always prioritize long-term maintainability over short-term convenience.
+## Scope
 
----
+- Implement only the requested milestone or fix.
+- Do not add unrelated features, refactors, dependencies, or documentation.
+- Preserve user changes and existing working behavior.
+- Prefer existing project patterns over new abstractions.
 
-# Before Every Task
+## Architecture Rules
 
-Before making any implementation decisions:
+- Keep business rules in framework-independent TypeScript engines.
+- Keep React components focused on presentation and interaction.
+- Represent score changes as immutable `ScoreEvent` records.
+- Derive totals through `ScoreEngine`; never persist or mutate totals directly.
+- Define game behavior through templates instead of game-name conditionals.
+- Access persistence through the storage abstraction; engines must not depend on Local Storage.
 
-1. Read `PROJECTSPEC.md`.
-2. Follow the documented architecture.
-3. Implement only the requested milestone.
-4. Do not introduce unrelated features or refactors.
+## Folder Responsibilities
 
-If a request conflicts with `PROJECTSPEC.md`, explain the conflict before making changes.
+- `components/`: reusable presentation components
+- `pages/`: route-level screens
+- `engine/`: business logic
+- `stores/`: Zustand state orchestration
+- `services/`: persistence and infrastructure
+- `models/`: domain types
+- `templates/`: built-in game templates
+- `utils/`: pure shared utilities
 
----
+Do not place business rules in `components/`, `pages/`, or storage services.
 
-# Technology Stack
+## Implementation Standards
 
-Frontend
+- Use strict TypeScript and functional React components.
+- Avoid `any`, duplicated rules, magic values, unnecessary dependencies, and deeply nested UI logic.
+- Keep functions and files focused.
+- Design touch interactions for a shared phone or tablet: large targets, minimal typing, fast score entry, and clear contrast.
 
-* React
-* TypeScript
-* Vite
+## Testing
 
-UI
+- Add or update unit tests for changed engine behavior.
+- Prioritize scoring, winner calculation, undo, session recovery, and template validation.
+- Run targeted checks first; broaden only when justified by the change.
+- Do not claim builds or tests passed unless they were executed.
 
-* Mantine
-* Tailwind CSS
+## Git Workflow
 
-State Management
+- Never commit directly to `main`.
+- Use a focused branch such as `feature/<name>`, `fix/<name>`, or `refactor/<name>`.
+- Keep commits limited to the requested work.
+- Do not push, create a pull request, merge, or deploy unless explicitly requested.
+- When authorized to create a pull request, target `main` and include the change summary, validation performed, UI screenshots when relevant, and known limitations.
 
-* Zustand
+## Completion
 
-Routing
-
-* React Router
-
-Forms
-
-* React Hook Form
-
-Testing
-
-* Vitest
-* React Testing Library
-
-Storage
-
-* Local Storage
-
-Hosting
-
-* Vercel
-
----
-
-# Architectural Principles
-
-## Business Logic First
-
-The business logic is the product.
-
-React components are only responsible for presentation.
-
-Business rules must never exist inside React components.
-
----
-
-## Engine-Based Architecture
-
-Business logic belongs in dedicated engines.
-
-The application should contain:
-
-* TemplateEngine
-* ScoreEngine
-* WinnerEngine
-* UndoEngine
-* SessionEngine
-
-The engines should be framework-independent and implemented in pure TypeScript.
-
----
-
-## Templates Over Hardcoded Logic
-
-Never implement logic such as:
-
-if game == "Scrabble"
-
-Games are defined through templates.
-
-The engines execute template rules.
-
-Adding a new board game should require configuration rather than new application logic whenever possible.
-
----
-
-## Event-Driven Scoring
-
-Never modify totals directly.
-
-Every score entered becomes an immutable ScoreEvent.
-
-Totals are always derived by the ScoreEngine.
-
-This enables:
-
-* Undo
-* Editing
-* Future statistics
-* Easier debugging
-* Future extensibility
-
----
-
-## Storage Abstraction
-
-Business logic must never depend on Local Storage.
-
-Use a storage service abstraction.
-
-Current implementation:
-
-Local Storage
-
-Future implementation:
-
-REST API
-
-Business logic should remain unchanged if storage changes.
-
----
-
-# Folder Responsibilities
-
-components/
-
-Presentation components only.
-
-pages/
-
-Route-level pages.
-
-engine/
-
-Business logic.
-
-stores/
-
-Zustand state management.
-
-services/
-
-Storage and infrastructure services.
-
-models/
-
-Domain models.
-
-templates/
-
-Built-in JSON templates.
-
-utils/
-
-Pure utility functions.
-
----
-
-# Coding Standards
-
-Always:
-
-* Use strict TypeScript.
-* Prefer composition over inheritance.
-* Use functional React components.
-* Write small focused functions.
-* Keep files cohesive.
-* Reuse components.
-* Prefer readable code over clever code.
-
-Avoid:
-
-* any
-* duplicated logic
-* magic strings
-* magic numbers
-* deeply nested components
-* unnecessary dependencies
-
----
-
-# UI Standards
-
-The application is designed for phones and tablets placed in the center of a table.
-
-Prioritize:
-
-* Large buttons
-* Large typography
-* High contrast
-* Minimal typing
-* Minimal dialogs
-* Fast score entry
-
----
-
-# Local Storage Rules
-
-Automatically persist:
-
-* Active game session
-* Custom templates
-* User preferences
-
-Never store completed games.
-
-On startup, detect unfinished games and allow the user to:
-
-* Resume
-* Discard
-
----
-
-# Testing Standards
-
-Every business engine must have unit tests.
-
-High-priority tests include:
-
-* Score calculation
-* Winner calculation
-* Undo
-* Session recovery
-* Template validation
-
-Business logic is more important than UI testing.
-
----
-
-# Performance Goals
-
-The application should:
-
-* Load in under 2 seconds.
-* Update scores instantly.
-* Undo instantly.
-* Minimize unnecessary re-renders.
-* Keep the production bundle lightweight.
-
----
-
-# Development Workflow
-
-Work on one milestone at a time.
-
-For every milestone:
-
-1. Implement only the requested functionality.
-2. Ensure the project builds successfully.
-3. Run all relevant tests.
-4. Keep changes focused.
-5. Do not begin the next milestone until the current one is complete.
-
----
-
-# Git Workflow
-
-**Never commit directly to `main`.**
-
-For every milestone:
-
-1. Create a new feature branch from the latest `main`.
-2. Name branches using a descriptive convention such as:
-   * `feature/player-setup`
-   * `feature/template-engine`
-   * `feature/undo-engine`
-   * `fix/score-calculation`
-   * `refactor/session-storage`
-3. Make focused commits related only to the current milestone.
-4. Ensure the project builds successfully and all tests pass before publishing.
-5. Push the feature branch to the remote repository.
-6. **Create a Pull Request targeting `main`.**
-7. Include in the Pull Request:
-   * Summary of changes
-   * Testing performed
-   * Screenshots (if UI changes)
-   * Known limitations (if any)
-8. **Do not merge the Pull Request.** Wait for review and approval.
-
----
-
-# Commit Guidelines
-
-Each milestone should produce a focused commit.
-
-Examples:
-
-Initialize project
-Create domain models
-Implement TemplateEngine
-Implement ScoreEngine
-Implement WinnerEngine
-Implement UndoEngine
-Implement SessionEngine
-Add Player Setup page
-Add Scoring page
-Implement Session Recovery
-
-Avoid mixing unrelated changes into a single commit.
-
----
-
-# Definition of Done
-
-A task is complete only when:
-
-* The project compiles successfully.
-* All tests pass.
-* There are no TypeScript errors.
-* There are no ESLint errors.
-* The implementation follows the architecture.
-* Business logic remains outside the UI.
-* A Pull Request has been created for the completed milestone.
-* The solution is reusable, maintainable, and documented where appropriate.
-
----
-
-# Guiding Philosophy
-
-* Business logic is the product.
-* Templates define games.
-* Engines execute rules.
-* Every score is an immutable event.
-* Every action should be undoable.
-* No active game should ever be lost.
-* Storage should be replaceable.
-* Optimize for simplicity before adding features.
+A task is complete when the requested behavior is implemented, applicable tests and checks have passed or limitations are reported, the architecture remains compliant, and no known material defect remains.
