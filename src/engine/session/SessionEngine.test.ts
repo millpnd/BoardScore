@@ -369,6 +369,45 @@ describe('SessionEngine rounds', () => {
     expect(engine.getSnapshot()?.currentRound?.id).toBe('round-2')
   })
 
+  it('undoes round advancement before undoing the previous score', () => {
+    const engine = startGame(
+      createEngine(customTemplate({ scoringType: ScoringType.PerRound })),
+    )
+    engine.nextRound({
+      id: 'round-1',
+      startedAt: '2026-01-01T00:10:00.000Z',
+    })
+    engine.addPlayerScore(
+      {
+        id: 'score-1',
+        playerId: 'mill',
+        points: 10,
+        createdAt: '2026-01-01T00:15:00.000Z',
+      },
+      action('add-score-1'),
+    )
+    engine.nextRound({
+      id: 'round-2',
+      startedAt: '2026-01-01T00:20:00.000Z',
+    })
+
+    const restoredRound = engine.undoLastAction().session
+
+    expect(restoredRound.rounds).toEqual([
+      {
+        id: 'round-1',
+        number: 1,
+        startedAt: '2026-01-01T00:10:00.000Z',
+      },
+    ])
+    expect(restoredRound.scoreEvents).toMatchObject([
+      { id: 'score-1', roundId: 'round-1', points: 10 },
+    ])
+    expect(engine.getCurrentRound()?.id).toBe('round-1')
+    expect(engine.getCurrentRoundScores()[0]?.total).toBe(10)
+    expect(engine.undoLastAction().session.scoreEvents).toEqual([])
+  })
+
   it('supports fixed round limits', () => {
     const engine = startGame(
       createEngine(
