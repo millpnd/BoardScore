@@ -6,7 +6,7 @@ import {
   StepForward,
   UserRound,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 
 import { useGameStore } from '@/app/useStores'
@@ -25,8 +25,47 @@ import {
   SecondaryButton,
   Toolbar,
 } from '@/components'
+import type { EntityId, GameSession, Round } from '@/models'
 import { GameSessionStatus, RoundType, ScoringType } from '@/models'
 import { createEntityId } from '@/utils/createEntityId'
+
+const automaticRoundAdvanceMetadata = {
+  automaticScoreEntryAdvance: true,
+} as const
+
+const getSubmittedPlayerIds = (
+  session: GameSession,
+  currentRound: Round | undefined,
+  perRound: boolean,
+): ReadonlySet<EntityId> => {
+  if (!currentRound) return new Set()
+
+  return new Set(
+    session.scoreEvents
+      .filter((event) =>
+        perRound
+          ? event.roundId === currentRound.id
+          : event.roundId === undefined &&
+            event.createdAt >= currentRound.startedAt &&
+            (currentRound.completedAt === undefined ||
+              event.createdAt < currentRound.completedAt),
+      )
+      .map((event) => event.playerId),
+  )
+}
+
+const getNextEligiblePlayerId = (
+  playerIds: readonly EntityId[],
+  submittedPlayerIds: ReadonlySet<EntityId>,
+  currentPlayerId: EntityId,
+): EntityId | undefined => {
+  const currentIndex = playerIds.indexOf(currentPlayerId)
+  for (let offset = 1; offset <= playerIds.length; offset += 1) {
+    const playerId = playerIds[(currentIndex + offset) % playerIds.length]
+    if (playerId && !submittedPlayerIds.has(playerId)) return playerId
+  }
+  return undefined
+}
 
 export function ScoringPage() {
   const navigate = useNavigate()
@@ -34,6 +73,8 @@ export function ScoringPage() {
   const [scoreInput, setScoreInput] = useState('')
   const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false)
   const [finishConfirmationOpen, setFinishConfirmationOpen] = useState(false)
+  const scoreInputRef = useRef<HTMLInputElement>(null)
+  const submissionInFlight = useRef(false)
   const session = useGameStore((state) => state.session)
   const currentRound = useGameStore((state) => state.currentRound)
   const standings = useGameStore((state) => state.currentStandings)
@@ -55,6 +96,10 @@ export function ScoringPage() {
     return () => window.removeEventListener('beforeunload', confirmRefresh)
   }, [])
 
+  const focusScoreInput = useCallback(() => {
+    window.setTimeout(() => scoreInputRef.current?.focus(), 0)
+  }, [])
+
   const roundScoresByPlayer = useMemo(
     () =>
       new Map(
@@ -62,6 +107,52 @@ export function ScoringPage() {
       ),
     [currentRoundScores],
   )
+
+  const perRound = session?.template.scoringType === ScoringType.PerRound
+  const submittedPlayerIds = useMemo(
+    () =>
+      session
+        ? getSubmittedPlayerIds(session, currentRound, perRound)
+        : new Set<EntityId>(),
+    [currentRound, perRound, session],
+  )
+  const eligiblePlayers = useMemo(
+    () =>
+      session?.players.filter(({ id }) => !submittedPlayerIds.has(id)) ?? [],
+    [session?.players, submittedPlayerIds],
+  )
+  const activePlayerId =
+    selectedPlayerId &&
+    eligiblePlayers.some(({ id }) => id === selectedPlayerId)
+      ? selectedPlayerId
+      : eligiblePlayers[0]?.id
+  const selectedPlayer = session?.players.find(
+    ({ id }) => id === activePlayerId,
+  )
+  const fixedRoundTotal =
+    session?.template.roundConfiguration.type === RoundType.Fixed
+      ? session.template.roundConfiguration.totalRounds
+      : undefined
+  const canStartAnotherRound =
+    session !== undefined &&
+    currentRound !== undefined &&
+    (session.template.roundConfiguration.type === RoundType.Unlimited ||
+      currentRound.number < session.template.roundConfiguration.totalRounds)
+
+  useEffect(() => {
+    if (activePlayerId !== selectedPlayerId) {
+      setSelectedPlayerId(activePlayerId)
+      setScoreInput('')
+    }
+  }, [activePlayerId, selectedPlayerId])
+
+  useEffect(() => {
+    if (activePlayerId && !isLoading && !(perRound && !currentRound)) {
+      focusScoreInput()
+    } else if (!activePlayerId) {
+      scoreInputRef.current?.blur()
+    }
+  }, [activePlayerId, currentRound, focusScoreInput, isLoading, perRound])
 
   if (
     !session ||
@@ -72,26 +163,60 @@ export function ScoringPage() {
     return <Navigate replace to="/" />
   }
 
-  const perRound = session.template.scoringType === ScoringType.PerRound
-  const selectedPlayer = session.players.find(
-    ({ id }) => id === selectedPlayerId,
-  )
-  const fixedRoundTotal =
-    session.template.roundConfiguration.type === RoundType.Fixed
-      ? session.template.roundConfiguration.totalRounds
-      : undefined
-
   const submitScore = async () => {
-    if (!selectedPlayer || scoreInput === '' || scoreInput === '-') return
+    if (
+      submissionInFlight.current ||
+      !selectedPlayer ||
+      submittedPlayerIds.has(selectedPlayer.id) ||
+      scoreInput === '' ||
+      scoreInput === '-'
+    ) {
+      return
+    }
+
+    submissionInFlight.current = true
+    const submittedAfterScore = new Set(submittedPlayerIds)
+    submittedAfterScore.add(selectedPlayer.id)
+    const nextPlayerId = getNextEligiblePlayerId(
+      session.players.map(({ id }) => id),
+      submittedAfterScore,
+      selectedPlayer.id,
+    )
     const timestamp = new Date().toISOString()
-    const recorded = await recordScore({
-      eventId: createEntityId(),
-      actionId: createEntityId(),
-      playerId: selectedPlayer.id,
-      points: Number(scoreInput),
-      timestamp,
-    })
-    if (recorded) setScoreInput('')
+    try {
+      const recorded = await recordScore({
+        eventId: createEntityId(),
+        actionId: createEntityId(),
+        playerId: selectedPlayer.id,
+        points: Number(scoreInput),
+        timestamp,
+      })
+      if (!recorded) return
+
+      setScoreInput('')
+      if (nextPlayerId) {
+        setSelectedPlayerId(nextPlayerId)
+        focusScoreInput()
+        return
+      }
+
+      if (canStartAnotherRound) {
+        const advanced = await nextRound({
+          id: createEntityId(),
+          startedAt: new Date().toISOString(),
+          metadata: automaticRoundAdvanceMetadata,
+        })
+        if (advanced) {
+          focusScoreInput()
+          return
+        }
+      }
+
+      setSelectedPlayerId(undefined)
+      scoreInputRef.current?.blur()
+    } finally {
+      submissionInFlight.current = false
+    }
   }
 
   const advanceRound = async () => {
@@ -100,6 +225,15 @@ export function ScoringPage() {
       startedAt: new Date().toISOString(),
     })
     setScoreInput('')
+  }
+
+  const undoScore = async () => {
+    const restoredPlayerId = session.scoreEvents.at(-1)?.playerId
+    const undone = await undoLastAction()
+    if (undone) {
+      setScoreInput('')
+      setSelectedPlayerId(restoredPlayerId)
+    }
   }
 
   const finishGame = async () => {
@@ -140,7 +274,7 @@ export function ScoringPage() {
               <SecondaryButton
                 disabled={!canUndo || isLoading}
                 leftSection={<RotateCcw aria-hidden size={20} />}
-                onClick={() => void undoLastAction()}
+                onClick={() => void undoScore()}
               >
                 Undo
               </SecondaryButton>
@@ -194,8 +328,11 @@ export function ScoringPage() {
                         isLeader={standing.isWinner}
                         name={standing.playerName}
                         onSelect={() => {
-                          setSelectedPlayerId(standing.playerId)
-                          setScoreInput('')
+                          if (!submittedPlayerIds.has(standing.playerId)) {
+                            setSelectedPlayerId(standing.playerId)
+                            setScoreInput('')
+                            focusScoreInput()
+                          }
                         }}
                         rank={standing.rank}
                         roundScore={
@@ -203,7 +340,7 @@ export function ScoringPage() {
                             ? (roundScoresByPlayer.get(standing.playerId) ?? 0)
                             : undefined
                         }
-                        selected={selectedPlayerId === standing.playerId}
+                        selected={activePlayerId === standing.playerId}
                         total={standing.total}
                       />
                     </li>
@@ -219,6 +356,7 @@ export function ScoringPage() {
                   label={`Score for ${selectedPlayer.name}`}
                   onChange={setScoreInput}
                   onSubmit={() => void submitScore()}
+                  ref={scoreInputRef}
                   value={scoreInput}
                 />
               ) : (
