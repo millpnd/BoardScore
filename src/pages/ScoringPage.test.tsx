@@ -79,11 +79,9 @@ describe('ScoringPage', () => {
     expect(
       screen.getByRole('group', { name: 'Score for Mill numeric keypad' }),
     ).toBeVisible()
-    await waitFor(() =>
-      expect(
-        screen.getByRole('textbox', { name: 'Score for Mill' }),
-      ).toHaveFocus(),
-    )
+    expect(
+      screen.queryByRole('textbox', { name: 'Score for Mill' }),
+    ).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /John/ })).toHaveAttribute(
       'aria-pressed',
       'false',
@@ -105,9 +103,13 @@ describe('ScoringPage', () => {
       'aria-pressed',
       'true',
     )
-    const input = screen.getByRole('textbox', { name: 'Score for John' })
-    expect(input).toHaveValue('')
-    await waitFor(() => expect(input).toHaveFocus())
+    expect(
+      screen.getByRole('group', { name: 'Score for John numeric keypad' }),
+    ).toBeVisible()
+    expect(screen.getByRole('status')).toHaveTextContent('0')
+    expect(
+      screen.queryByRole('textbox', { name: 'Score for John' }),
+    ).not.toBeInTheDocument()
   })
 
   it('records running-total scores, persists, updates standings, and undoes', async () => {
@@ -132,11 +134,9 @@ describe('ScoringPage', () => {
     expect(mill).toHaveTextContent('0')
     expect(storage.session?.scoreEvents).toEqual([])
     expect(mill).toHaveAttribute('aria-pressed', 'true')
-    await waitFor(() =>
-      expect(
-        screen.getByRole('textbox', { name: 'Score for Mill' }),
-      ).toHaveFocus(),
-    )
+    expect(
+      screen.queryByRole('textbox', { name: 'Score for Mill' }),
+    ).not.toBeInTheDocument()
     expect(undo).toBeDisabled()
   })
 
@@ -155,11 +155,9 @@ describe('ScoringPage', () => {
       'aria-pressed',
       'true',
     )
-    await waitFor(() =>
-      expect(
-        screen.getByRole('textbox', { name: 'Score for Mill' }),
-      ).toHaveFocus(),
-    )
+    expect(
+      screen.queryByRole('textbox', { name: 'Score for Mill' }),
+    ).not.toBeInTheDocument()
   })
 
   it('undoes a final-player submit back to that player in the previous round', async () => {

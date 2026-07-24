@@ -6,7 +6,7 @@ import {
   StepForward,
   UserRound,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 
 import { useGameStore } from '@/app/useStores'
@@ -73,7 +73,6 @@ export function ScoringPage() {
   const [scoreInput, setScoreInput] = useState('')
   const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false)
   const [finishConfirmationOpen, setFinishConfirmationOpen] = useState(false)
-  const scoreInputRef = useRef<HTMLInputElement>(null)
   const submissionInFlight = useRef(false)
   const session = useGameStore((state) => state.session)
   const currentRound = useGameStore((state) => state.currentRound)
@@ -94,10 +93,6 @@ export function ScoringPage() {
     }
     window.addEventListener('beforeunload', confirmRefresh)
     return () => window.removeEventListener('beforeunload', confirmRefresh)
-  }, [])
-
-  const focusScoreInput = useCallback(() => {
-    window.setTimeout(() => scoreInputRef.current?.focus(), 0)
   }, [])
 
   const roundScoresByPlayer = useMemo(
@@ -138,21 +133,6 @@ export function ScoringPage() {
     currentRound !== undefined &&
     (session.template.roundConfiguration.type === RoundType.Unlimited ||
       currentRound.number < session.template.roundConfiguration.totalRounds)
-
-  useEffect(() => {
-    if (activePlayerId !== selectedPlayerId) {
-      setSelectedPlayerId(activePlayerId)
-      setScoreInput('')
-    }
-  }, [activePlayerId, selectedPlayerId])
-
-  useEffect(() => {
-    if (activePlayerId && !isLoading && !(perRound && !currentRound)) {
-      focusScoreInput()
-    } else if (!activePlayerId) {
-      scoreInputRef.current?.blur()
-    }
-  }, [activePlayerId, currentRound, focusScoreInput, isLoading, perRound])
 
   if (
     !session ||
@@ -196,7 +176,6 @@ export function ScoringPage() {
       setScoreInput('')
       if (nextPlayerId) {
         setSelectedPlayerId(nextPlayerId)
-        focusScoreInput()
         return
       }
 
@@ -207,13 +186,12 @@ export function ScoringPage() {
           metadata: automaticRoundAdvanceMetadata,
         })
         if (advanced) {
-          focusScoreInput()
+          setSelectedPlayerId(undefined)
           return
         }
       }
 
       setSelectedPlayerId(undefined)
-      scoreInputRef.current?.blur()
     } finally {
       submissionInFlight.current = false
     }
@@ -331,7 +309,6 @@ export function ScoringPage() {
                           if (!submittedPlayerIds.has(standing.playerId)) {
                             setSelectedPlayerId(standing.playerId)
                             setScoreInput('')
-                            focusScoreInput()
                           }
                         }}
                         rank={standing.rank}
@@ -356,7 +333,6 @@ export function ScoringPage() {
                   label={`Score for ${selectedPlayer.name}`}
                   onChange={setScoreInput}
                   onSubmit={() => void submitScore()}
-                  ref={scoreInputRef}
                   value={scoreInput}
                 />
               ) : (
