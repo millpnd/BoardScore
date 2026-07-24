@@ -1,9 +1,10 @@
-import type { GameSession, ScoreEvent } from '../../models'
+import type { GameSession, Round, ScoreEvent } from '../../models'
 import { ScoreEventType } from '../../models'
 import { ScoreEngine, ScoreEngineError } from '../score'
 import { UndoEngineError } from './UndoEngineError'
 import {
   UndoActionType,
+  type AdvanceRoundAction,
   type AddScoreEventAction,
   type DeleteScoreEventAction,
   type UndoAction,
@@ -40,6 +41,15 @@ const isScoreEvent = (value: unknown): value is ScoreEvent =>
   Number.isFinite(value.points) &&
   isNonEmptyString(value.createdAt)
 
+const isRound = (value: unknown): value is Round =>
+  isRecord(value) &&
+  isNonEmptyString(value.id) &&
+  typeof value.number === 'number' &&
+  Number.isInteger(value.number) &&
+  value.number > 0 &&
+  isNonEmptyString(value.startedAt) &&
+  (value.completedAt === undefined || isNonEmptyString(value.completedAt))
+
 const eventsEqual = (left: ScoreEvent, right: ScoreEvent): boolean =>
   left.id === right.id &&
   left.playerId === right.playerId &&
@@ -48,7 +58,39 @@ const eventsEqual = (left: ScoreEvent, right: ScoreEvent): boolean =>
   left.points === right.points &&
   left.createdAt === right.createdAt
 
+const roundsEqual = (
+  left: readonly Round[],
+  right: readonly Round[],
+): boolean =>
+  left.length === right.length &&
+  left.every((round, index) => {
+    const other = right[index]
+    return (
+      other !== undefined &&
+      round.id === other.id &&
+      round.number === other.number &&
+      round.startedAt === other.startedAt &&
+      round.completedAt === other.completedAt
+    )
+  })
+
+const roundIdentitiesEqual = (
+  left: readonly Round[],
+  right: readonly Round[],
+): boolean =>
+  left.length === right.length &&
+  left.every((round, index) => {
+    const other = right[index]
+    return (
+      other !== undefined &&
+      round.id === other.id &&
+      round.number === other.number &&
+      round.startedAt === other.startedAt
+    )
+  })
+
 const cloneEvent = (event: ScoreEvent): ScoreEvent => ({ ...event })
+const cloneRound = (round: Round): Round => ({ ...round })
 
 const cloneMetadata = (
   metadata: UndoMetadata | undefined,
@@ -74,6 +116,13 @@ const cloneAction = (action: UndoAction): UndoAction => {
         ...action,
         metadata: cloneMetadata(action.metadata),
         previousEvent: cloneEvent(action.previousEvent),
+      }
+    case UndoActionType.AdvanceRound:
+      return {
+        ...action,
+        metadata: cloneMetadata(action.metadata),
+        previousRounds: action.previousRounds.map(cloneRound),
+        currentRounds: action.currentRounds.map(cloneRound),
       }
   }
 }
@@ -210,11 +259,25 @@ export class UndoEngine {
         )
           break
         return action as unknown as DeleteScoreEventAction
+      case UndoActionType.AdvanceRound:
+        if (
+          !Array.isArray(action.previousRounds) ||
+          !Array.isArray(action.currentRounds) ||
+          action.previousRounds.some((round) => !isRound(round)) ||
+          action.currentRounds.some((round) => !isRound(round)) ||
+          action.currentRounds.length !== action.previousRounds.length + 1 ||
+          !roundIdentitiesEqual(
+            action.previousRounds,
+            action.currentRounds.slice(0, -1),
+          )
+        )
+          break
+        return action as unknown as AdvanceRoundAction
     }
 
     throw new UndoEngineError(
       'INVALID_ACTION',
-      `Undo action "${action.id}" has invalid score-event state.`,
+      `Undo action "${action.id}" has invalid state.`,
     )
   }
 
@@ -246,6 +309,14 @@ export class UndoEngine {
           throw new UndoEngineError(
             'INVALID_ACTION',
             `Deleted score event "${action.previousEvent.id}" is not restorable.`,
+          )
+        }
+        return
+      case UndoActionType.AdvanceRound:
+        if (!roundsEqual(session.rounds, action.currentRounds)) {
+          throw new UndoEngineError(
+            'INVALID_ACTION',
+            `Current rounds do not match round action "${action.id}".`,
           )
         }
     }
@@ -292,6 +363,11 @@ export class UndoEngine {
             ],
           }
         }
+        case UndoActionType.AdvanceRound:
+          return {
+            ...session,
+            rounds: action.previousRounds.map(cloneRound),
+          }
       }
     } catch (error) {
       if (!(error instanceof ScoreEngineError)) throw error

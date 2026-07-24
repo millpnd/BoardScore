@@ -307,18 +307,31 @@ export class SessionEngine {
       )
     }
 
+    const previousRounds = session.rounds.map((round) => ({ ...round }))
     const rounds = session.rounds.map((round, index) =>
       index === session.rounds.length - 1 && !round.completedAt
         ? { ...round, completedAt: input.startedAt }
         : round,
     )
-    return this.commit({
+    const updated = {
       ...session,
       rounds: [
         ...rounds,
         { id: input.id, number: nextNumber, startedAt: input.startedAt },
       ],
-    })
+    } satisfies GameSession
+
+    if (previousRounds.length > 0) {
+      this.undoEngine.recordAction(updated, {
+        id: `advance-round-${input.id}`,
+        sessionId: session.id,
+        timestamp: input.startedAt,
+        type: UndoActionType.AdvanceRound,
+        previousRounds,
+        currentRounds: updated.rounds,
+      })
+    }
+    return this.commit(updated)
   }
 
   addScore(event: ScoreEvent, context: ActionContext): GameSession {
