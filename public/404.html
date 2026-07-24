@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BoardScore</title>
+    <script>
+      const basePath = '/BoardScore/'
+      const { pathname, search, hash } = window.location
+      const route = pathname.startsWith(basePath)
+        ? pathname.slice(basePath.length)
+        : ''
+
+      window.location.replace(`${basePath}#/${route}${search}${hash}`)
+    </script>
+  </head>
+  <body></body>
+</html>
