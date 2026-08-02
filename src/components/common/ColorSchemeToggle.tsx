@@ -4,16 +4,25 @@ import { Moon, Sun } from 'lucide-react'
 import { IconButton } from '../buttons'
 
 export function ColorSchemeToggle() {
-  const { setColorScheme } = useMantineColorScheme()
-  const colorScheme = useComputedColorScheme('light')
-  const nextScheme = colorScheme === 'dark' ? 'light' : 'dark'
+  const {
+    colorScheme: preferenceColorScheme,
+    clearColorScheme,
+    setColorScheme,
+  } = useMantineColorScheme()
+  const computedColorScheme = useComputedColorScheme('light')
+  const nextScheme = computedColorScheme === 'dark' ? 'light' : 'dark'
+  const isUsingSystemScheme = preferenceColorScheme === 'auto'
 
   return (
     <IconButton
-      label={`Use ${nextScheme} theme`}
-      onClick={() => setColorScheme(nextScheme)}
+      label={
+        isUsingSystemScheme ? `Use ${nextScheme} theme` : 'Use system theme'
+      }
+      onClick={() =>
+        isUsingSystemScheme ? setColorScheme(nextScheme) : clearColorScheme()
+      }
     >
-      {colorScheme === 'dark' ? (
+      {computedColorScheme === 'dark' ? (
         <Sun aria-hidden size={22} />
       ) : (
         <Moon aria-hidden size={22} />

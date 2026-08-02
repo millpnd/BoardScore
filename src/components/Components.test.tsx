@@ -186,7 +186,9 @@ describe('component library', () => {
     expect(onBack).toHaveBeenCalledOnce()
     await user.click(screen.getByRole('button', { name: 'Use dark theme' }))
     expect(
-      screen.getByRole('button', { name: 'Use light theme' }),
+      screen.getByRole('button', { name: 'Use system theme' }),
     ).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Use system theme' }))
+    expect(screen.getByRole('button', { name: 'Use dark theme' })).toBeVisible()
   })
 })

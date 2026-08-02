@@ -13,6 +13,8 @@ export const renderWithTheme = (
   options?: RenderOptions,
 ): RenderResult =>
   render(
-    <MantineProvider theme={boardScoreTheme}>{ui}</MantineProvider>,
+    <MantineProvider defaultColorScheme="auto" theme={boardScoreTheme}>
+      {ui}
+    </MantineProvider>,
     options,
   )
