@@ -142,6 +142,7 @@ describe('game setup routes', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add player' }))
     expect(screen.getAllByPlaceholderText('Enter name')).toHaveLength(3)
+    expect(screen.getAllByPlaceholderText('Enter name')[2]).toHaveFocus()
     await user.click(screen.getByRole('button', { name: 'Remove player 3' }))
     expect(screen.getAllByPlaceholderText('Enter name')).toHaveLength(2)
   })
