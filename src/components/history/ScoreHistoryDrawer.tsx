@@ -20,6 +20,7 @@ const getPlayerName = (session: GameSession, event: ScoreEvent): string =>
   'Unknown player'
 
 interface ScoreHistoryGroup {
+  readonly description?: string
   readonly id: string
   readonly title: string
   readonly events: readonly ScoreEvent[]
@@ -33,7 +34,11 @@ const getHistoryGroups = (session: GameSession): readonly ScoreHistoryGroup[] =>
       event.roundId === undefined
         ? undefined
         : session.rounds.find(({ id }) => id === event.roundId)
-    const id = round ? `round:${round.id}` : 'other'
+    const id = round
+      ? `round:${round.id}`
+      : event.roundId === undefined
+        ? 'running-total'
+        : 'other'
     const existing = groups.get(id)
 
     if (existing) {
@@ -42,7 +47,14 @@ const getHistoryGroups = (session: GameSession): readonly ScoreHistoryGroup[] =>
       groups.set(id, {
         events: [event],
         id,
-        title: round ? `Round ${round.number}` : 'Other scores',
+        title:
+          round ? `Round ${round.number}` : id === 'running-total'
+            ? 'Score changes'
+            : 'Other scores',
+        description:
+          id === 'running-total'
+            ? "Each entry adds to the player's running total."
+            : undefined,
       })
     }
   }
@@ -141,6 +153,11 @@ export function ScoreHistoryDrawer({
                 >
                   {group.title}
                 </Text>
+                {group.description ? (
+                  <Text c="dimmed" size="sm">
+                    {group.description}
+                  </Text>
+                ) : null}
                 <Stack
                   aria-label={`${group.title} score entries`}
                   component="ol"

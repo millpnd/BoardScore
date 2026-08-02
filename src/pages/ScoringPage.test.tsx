@@ -158,6 +158,26 @@ describe('ScoringPage', () => {
     expect(undo).toBeDisabled()
   })
 
+  it('shows Qwirkle running-total scores as score changes', async () => {
+    const user = userEvent.setup()
+    const { storage } = await renderScoring('qwirkle')
+
+    await enterScore(user, '12')
+
+    expect(storage.session?.scoreEvents[0]).toMatchObject({
+      playerId: 'mill',
+      points: 12,
+      roundId: undefined,
+    })
+    await user.click(screen.getByRole('button', { name: /History/ }))
+    const history = await screen.findByRole('dialog', { name: 'Score history' })
+    expect(history).toHaveTextContent('Score changes')
+    expect(history).toHaveTextContent(
+      "Each entry adds to the player's running total.",
+    )
+    expect(history).not.toHaveTextContent('Other scores')
+  })
+
   it('opens live score history without changing the current turn or keypad', async () => {
     const user = userEvent.setup()
     await renderScoring()
