@@ -9,6 +9,14 @@
   --boardscore-motion-fast: 140ms;
 }
 
+html[data-mantine-color-scheme='light'] {
+  color-scheme: light;
+}
+
+html[data-mantine-color-scheme='dark'] {
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
