@@ -2,6 +2,7 @@ import { Alert, Badge, Grid, Group, Stack, Text, Title } from '@mantine/core'
 import {
   AlertCircle,
   Flag,
+  History,
   RotateCcw,
   StepForward,
   UserRound,
@@ -22,6 +23,7 @@ import {
   PrimaryButton,
   RoundIndicator,
   ScoringPlayerCard,
+  ScoreHistoryDrawer,
   SecondaryButton,
   Toolbar,
 } from '@/components'
@@ -71,6 +73,7 @@ export function ScoringPage() {
   const navigate = useNavigate()
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>()
   const [scoreInput, setScoreInput] = useState('')
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false)
   const [finishConfirmationOpen, setFinishConfirmationOpen] = useState(false)
   const submissionInFlight = useRef(false)
@@ -250,6 +253,20 @@ export function ScoringPage() {
             )}
             <Toolbar ariaLabel="Game controls">
               <SecondaryButton
+                disabled={isLoading}
+                leftSection={<History aria-hidden size={20} />}
+                onClick={() => setHistoryOpen(true)}
+                rightSection={
+                  session.scoreEvents.length > 0 ? (
+                    <Badge size="sm" variant="filled">
+                      {session.scoreEvents.length}
+                    </Badge>
+                  ) : undefined
+                }
+              >
+                History
+              </SecondaryButton>
+              <SecondaryButton
                 disabled={!canUndo || isLoading}
                 leftSection={<RotateCcw aria-hidden size={20} />}
                 onClick={() => void undoScore()}
@@ -366,6 +383,11 @@ export function ScoringPage() {
         onConfirm={() => void finishGame()}
         opened={finishConfirmationOpen}
         title="Finish game?"
+      />
+      <ScoreHistoryDrawer
+        onClose={() => setHistoryOpen(false)}
+        opened={historyOpen}
+        session={session}
       />
     </AppLayout>
   )
