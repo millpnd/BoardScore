@@ -183,6 +183,32 @@ body {
   min-height: 7rem;
 }
 
+.scoring-player-card[data-selected] {
+  border: 3px solid
+    light-dark(
+      var(--mantine-color-boardBlue-7),
+      var(--mantine-color-boardBlue-4)
+    );
+  background: light-dark(
+    var(--mantine-color-boardBlue-0),
+    var(--mantine-color-boardBlue-9)
+  );
+  box-shadow: 0 0 0 4px
+    light-dark(
+      var(--mantine-color-boardBlue-2),
+      var(--mantine-color-boardBlue-7)
+    );
+}
+
+.scoring-player-details,
+.scoring-player-name {
+  min-width: 0;
+}
+
+.scoring-player-name {
+  overflow-wrap: anywhere;
+}
+
 .score-value,
 .keypad-display {
   font-variant-numeric: tabular-nums;
@@ -211,6 +237,10 @@ body {
 .numeric-keypad {
   width: min(100%, 28rem);
   margin-inline: auto;
+}
+
+.keypad-turn {
+  overflow-wrap: anywhere;
 }
 
 .numeric-keypad .mantine-Button-root {
