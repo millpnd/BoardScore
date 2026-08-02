@@ -76,6 +76,10 @@ describe('ScoringPage', () => {
 
     const mill = screen.getByRole('button', { name: /Mill/ })
     expect(mill).toHaveAttribute('aria-pressed', 'true')
+    expect(mill).toHaveAttribute('aria-current', 'true')
+    expect(screen.getAllByText('Current turn')).toHaveLength(1)
+    expect(mill).toHaveTextContent('Current turn')
+    expect(screen.getByText("Mill's turn.")).toBeVisible()
     expect(
       screen.getByRole('group', { name: 'Score for Mill numeric keypad' }),
     ).toBeVisible()
@@ -103,6 +107,12 @@ describe('ScoringPage', () => {
       'aria-pressed',
       'true',
     )
+    expect(screen.getByRole('button', { name: /John/ })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    expect(screen.getAllByText('Current turn')).toHaveLength(1)
+    expect(screen.getByText("John's turn.")).toBeVisible()
     expect(
       screen.getByRole('group', { name: 'Score for John numeric keypad' }),
     ).toBeVisible()
@@ -134,6 +144,9 @@ describe('ScoringPage', () => {
     expect(mill).toHaveTextContent('0')
     expect(storage.session?.scoreEvents).toEqual([])
     expect(mill).toHaveAttribute('aria-pressed', 'true')
+    expect(mill).toHaveAttribute('aria-current', 'true')
+    expect(screen.getAllByText('Current turn')).toHaveLength(1)
+    expect(screen.getByText("Mill's turn.")).toBeVisible()
     expect(
       screen.queryByRole('textbox', { name: 'Score for Mill' }),
     ).not.toBeInTheDocument()

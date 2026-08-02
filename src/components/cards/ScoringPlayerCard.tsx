@@ -24,6 +24,7 @@ export const ScoringPlayerCard = memo(function ScoringPlayerCard({
 }: ScoringPlayerCardProps) {
   return (
     <Card
+      aria-current={selected ? 'true' : undefined}
       aria-pressed={selected}
       className="interactive-card scoring-player-card"
       component="button"
@@ -32,14 +33,19 @@ export const ScoringPlayerCard = memo(function ScoringPlayerCard({
       type="button"
     >
       <Group justify="space-between" wrap="nowrap">
-        <Stack align="flex-start" gap={4}>
+        <Stack
+          align="flex-start"
+          className="scoring-player-details"
+          gap={4}
+        >
           <Group gap="xs">
             <Badge aria-label={`Rank ${rank}`} color="gray" variant="light">
               #{rank}
             </Badge>
             {isLeader ? <WinnerBadge label="Leader" /> : null}
+            {selected ? <Badge color="boardBlue">Current turn</Badge> : null}
           </Group>
-          <Text fw={750} size="lg">
+          <Text className="scoring-player-name" fw={750} size="lg">
             {name}
           </Text>
           {roundScore !== undefined ? (

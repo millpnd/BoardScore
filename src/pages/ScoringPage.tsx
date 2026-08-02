@@ -333,6 +333,7 @@ export function ScoringPage() {
                   label={`Score for ${selectedPlayer.name}`}
                   onChange={setScoreInput}
                   onSubmit={() => void submitScore()}
+                  playerName={selectedPlayer.name}
                   value={scoreInput}
                 />
               ) : (

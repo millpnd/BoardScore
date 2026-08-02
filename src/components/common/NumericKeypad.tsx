@@ -6,6 +6,7 @@ export interface NumericKeypadProps {
   readonly onChange: (value: string) => void
   readonly onSubmit?: () => void
   readonly label?: string
+  readonly playerName?: string
   readonly allowNegative?: boolean
   readonly disabled?: boolean
 }
@@ -17,6 +18,7 @@ export function NumericKeypad({
   onChange,
   onSubmit,
   label = 'Score',
+  playerName,
   allowNegative = true,
   disabled = false,
 }: NumericKeypadProps) {
@@ -42,8 +44,8 @@ export function NumericKeypad({
       withBorder
     >
       <Stack gap="sm">
-        <Text c="dimmed" fw={600} size="sm">
-          {label}
+        <Text className="keypad-turn" fw={800} size="xl">
+          {playerName ? `${playerName}'s turn.` : label}
         </Text>
         <Text
           aria-live="polite"
