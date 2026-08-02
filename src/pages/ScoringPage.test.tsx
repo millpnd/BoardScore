@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 
-import { screen, waitFor, within } from '@testing-library/react'
+import {
+  screen,
+  waitFor,
+  waitForElementToBeRemoved,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
@@ -151,6 +156,87 @@ describe('ScoringPage', () => {
       screen.queryByRole('textbox', { name: 'Score for Mill' }),
     ).not.toBeInTheDocument()
     expect(undo).toBeDisabled()
+  })
+
+  it('opens live score history without changing the current turn or keypad', async () => {
+    const user = userEvent.setup()
+    await renderScoring()
+
+    await user.click(screen.getByRole('button', { name: '1' }))
+    await user.click(screen.getByRole('button', { name: '2' }))
+    await user.click(screen.getByRole('button', { name: /History/ }))
+
+    const history = await screen.findByRole('dialog', { name: 'Score history' })
+    expect(history).toHaveTextContent('No scores recorded yet.')
+    expect(screen.getByRole('button', { name: /Mill/ })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('12')
+    expect(screen.getByText('Round 1 · 2 players')).toBeVisible()
+
+    await user.click(
+      within(history).getByRole('button', { name: 'Close score history' }),
+    )
+    await waitForElementToBeRemoved(() =>
+      screen.queryByRole('dialog', { name: 'Score history' }),
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('12')
+  })
+
+  it('shows submitted scores immediately and removes them after undo', async () => {
+    const user = userEvent.setup()
+    await renderScoring()
+
+    await enterScore(user, '12')
+    await user.click(screen.getByRole('button', { name: /History/ }))
+    let history = await screen.findByRole('dialog', { name: 'Score history' })
+    expect(history).toHaveTextContent('Mill')
+    expect(history).toHaveTextContent('+12')
+
+    await user.click(
+      within(history).getByRole('button', { name: 'Close score history' }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
+    await user.click(screen.getByRole('button', { name: /History/ }))
+    history = await screen.findByRole('dialog', { name: 'Score history' })
+    expect(history).toHaveTextContent('No scores recorded yet.')
+  })
+
+  it('shows score events from a recovered session', async () => {
+    const storage = new SetupFlowMemoryStorage()
+    const originalStores = createSetupFlowStores(storage)
+    await originalStores.game.getState().setupGame({
+      sessionId: 'session-1',
+      templateId: runningTemplateId,
+      players,
+      startedAt: '2026-01-01T00:00:00.000Z',
+      initialRoundId: 'round-1',
+    })
+    await originalStores.game.getState().recordScore({
+      actionId: 'recovered-action',
+      eventId: 'recovered-event',
+      playerId: 'mill',
+      points: 18,
+      timestamp: '2026-01-01T00:01:00.000Z',
+    })
+
+    const recoveredStores = createSetupFlowStores(storage)
+    await recoveredStores.game.getState().checkForRecoverableSession()
+    await recoveredStores.game.getState().resumeSession()
+    renderWithTheme(
+      <StoreProvider stores={recoveredStores}>
+        <MemoryRouter initialEntries={['/scoring']}>
+          <AppRoutes />
+        </MemoryRouter>
+      </StoreProvider>,
+    )
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /History/ }))
+    const history = await screen.findByRole('dialog', { name: 'Score history' })
+    expect(history).toHaveTextContent('Mill')
+    expect(history).toHaveTextContent('+18')
   })
 
   it('starts the next round after the final player score without duplicate rounds', async () => {

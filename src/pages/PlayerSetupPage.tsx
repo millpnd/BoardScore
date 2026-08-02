@@ -1,5 +1,6 @@
 import { Alert, Avatar, Stack, Text, Title } from '@mantine/core'
 import { AlertCircle, Plus, Trash2, Users } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 
@@ -41,18 +42,35 @@ export function PlayerSetupPage() {
   const playerLimitLabel = template?.maximumPlayers
     ? `Add ${template.minimumPlayers}-${template.maximumPlayers} players.`
     : `Add at least ${template?.minimumPlayers ?? 2} players.`
-  const { control, formState, handleSubmit, register } =
+  const { control, formState, handleSubmit, register, setFocus } =
     useForm<PlayerSetupForm>({
       defaultValues: {
         players: editingCompletedGame
           ? session.players.map(({ id, name }) => ({ playerId: id, name }))
-          : [newPlayer(), newPlayer()],
+        : [newPlayer(), newPlayer()],
       },
     })
+  const playerToFocus = useRef<number | undefined>(undefined)
+  const playerCardRefs = useRef<Record<number, HTMLDivElement | null>>({})
   const { append, fields, remove } = useFieldArray({
     control,
     name: 'players',
   })
+  useEffect(() => {
+    const index = playerToFocus.current
+    if (index === undefined || index >= fields.length) return
+
+    setFocus(`players.${index}.name`)
+    const scrollTimer = window.setTimeout(() => {
+      const element = playerCardRefs.current[index]
+      if (element && typeof element.scrollIntoView === 'function') {
+        element.scrollIntoView({ block: 'center' })
+      }
+      playerToFocus.current = undefined
+    }, 0)
+
+    return () => window.clearTimeout(scrollTimer)
+  }, [fields.length, setFocus])
   const canAddPlayer =
     template?.maximumPlayers === null ||
     template === undefined ||
@@ -114,7 +132,10 @@ export function PlayerSetupPage() {
           <SecondaryButton
             disabled={!canAddPlayer}
             leftSection={<Plus aria-hidden size={20} />}
-            onClick={() => append(newPlayer())}
+            onClick={() => {
+              playerToFocus.current = fields.length
+              append(newPlayer())
+            }}
             type="button"
           >
             Add player
@@ -142,7 +163,7 @@ export function PlayerSetupPage() {
         />
       }
     >
-      <PageContainer py="xl">
+      <PageContainer className="player-setup-page" pt="xl">
         <Stack
           component="form"
           gap="lg"
@@ -167,33 +188,40 @@ export function PlayerSetupPage() {
           <PlayerList ariaLabel="Players">
             {fields.map((field, index) => (
               <PlayerListItem key={field.id}>
-                <PlayerCard
-                  action={
-                    <IconButton
-                      label={`Remove player ${index + 1}`}
-                      onClick={() => remove(index)}
-                      type="button"
-                    >
-                      <Trash2 aria-hidden size={20} />
-                    </IconButton>
-                  }
-                  leading={<Avatar color="boardBlue">{index + 1}</Avatar>}
-                  name={`Player ${index + 1}`}
-                  details={
-                    <PlayerNameInput
-                      aria-label={`Player ${index + 1} name`}
-                      autoFocus={index === 0}
-                      error={formState.errors.players?.[index]?.name?.message}
-                      label=""
-                      placeholder="Enter name"
-                      {...register(`players.${index}.name`, {
-                        required: 'Player name is required.',
-                        validate: (name) =>
-                          name.trim().length > 0 || 'Player name is required.',
-                      })}
-                    />
-                  }
-                />
+                <div
+                  ref={(element) => {
+                    playerCardRefs.current[index] = element
+                  }}
+                >
+                  <PlayerCard
+                    action={
+                      <IconButton
+                        label={`Remove player ${index + 1}`}
+                        onClick={() => remove(index)}
+                        type="button"
+                      >
+                        <Trash2 aria-hidden size={20} />
+                      </IconButton>
+                    }
+                    leading={<Avatar color="boardBlue">{index + 1}</Avatar>}
+                    name={`Player ${index + 1}`}
+                    details={
+                      <PlayerNameInput
+                        aria-label={`Player ${index + 1} name`}
+                        autoFocus={index === 0}
+                        error={formState.errors.players?.[index]?.name?.message}
+                        label=""
+                        placeholder="Enter name"
+                        {...register(`players.${index}.name`, {
+                          required: 'Player name is required.',
+                          validate: (name) =>
+                            name.trim().length > 0 ||
+                            'Player name is required.',
+                        })}
+                      />
+                    }
+                  />
+                </div>
               </PlayerListItem>
             ))}
           </PlayerList>

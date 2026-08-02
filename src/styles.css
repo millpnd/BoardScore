@@ -127,6 +127,10 @@ body {
   padding-bottom: 2rem;
 }
 
+.player-setup-page {
+  padding-bottom: calc(10rem + env(safe-area-inset-bottom));
+}
+
 .winner-page {
   padding-bottom: 2rem;
 }
