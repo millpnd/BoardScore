@@ -98,24 +98,35 @@ describe('ScoreHistoryDrawer', () => {
       />,
     )
 
-    expect(screen.getByRole('list', { name: 'Score history groups' })).toBeVisible()
+    expect(
+      screen.getByRole('list', { name: 'Score history groups' }),
+    ).toBeVisible()
     const headings = screen.getAllByRole('heading', { level: 3 })
     expect(headings[0]).toHaveTextContent('Other scores')
-    expect(headings[1]).toHaveTextContent('Round 1')
+    expect(headings[1]).toHaveTextContent('Score changes')
+    expect(headings[2]).toHaveTextContent('Round 1')
 
     const otherEntries = screen.getByRole('list', {
       name: 'Other scores score entries',
     })
+    const scoreChangeEntries = screen.getByRole('list', {
+      name: 'Score changes score entries',
+    })
     const roundEntries = screen.getByRole('list', {
       name: 'Round 1 score entries',
     })
-    expect(within(otherEntries).getAllByRole('listitem')).toHaveLength(2)
+    expect(within(otherEntries).getAllByRole('listitem')).toHaveLength(1)
     expect(otherEntries).toHaveTextContent('Unknown player')
     expect(otherEntries).toHaveTextContent('+0')
     expect(otherEntries).toHaveTextContent('Correction')
-    expect(otherEntries).toHaveTextContent('John With A Very Long Name')
-    expect(otherEntries).toHaveTextContent('−4,000')
     expect(otherEntries).not.toHaveTextContent('Round 1')
+    expect(within(scoreChangeEntries).getAllByRole('listitem')).toHaveLength(1)
+    expect(scoreChangeEntries).toHaveTextContent('John With A Very Long Name')
+    expect(scoreChangeEntries).toHaveTextContent('−4,000')
+    expect(screen.getByText(
+      "Each entry adds to the player's running total.",
+    )).toBeVisible()
+    expect(scoreChangeEntries).not.toHaveTextContent('Round 1')
     expect(within(roundEntries).getAllByRole('listitem')).toHaveLength(1)
     expect(roundEntries).toHaveTextContent('Mill')
     expect(roundEntries).toHaveTextContent('+12')
